@@ -1,0 +1,26 @@
+# Vectura — AI-Powered Trading Assistant
+
+Vectura is an open-source project to build a fully automated, AI-assisted stock trading system. It analyzes news and market data, reasons about buy/hold/sell actions, executes paper or real trades, and exposes dashboards.
+
+## What it is
+- **AI reasoning + automation**: Models interpret news/sentiment + price action and emit decisions.
+- **Trading**: Executes via a brokerage API(with paper and real modes).
+- **Transparent**: Stores reasoning, confidence, and outcomes for auditability.
+- **Free-tier friendly**: Designed to run using free/freemium tooling.
+
+## High-level architecture
+- **Frontend (Next.js)**: Dashboard to view portfolio, trades, metrics, and AI reasoning.
+- **Workflows (Trigger.dev)**: Scheduled jobs for pre-market, intraday, and end-of-day tasks.
+- **Database (Supabase)**: Stores decisions, logs, portfolio, and analytics; supports realtime updates.
+- **Broker (Alpaca)**: Trading API for orders and market data.
+- **AI Layer (OpenRouter)**: Access to a variety of models with fallback strategies.
+
+## Planned capabilities
+- Portfolio overview and performance timeline
+- AI decision viewer with confidence scores
+- News and sentiment feed
+- Risk limits and trading cooldowns
+
+## Getting started
+- Install dependencies and run dev server: `npm install && npm run dev`
+- Set up env vars for external services (to be documented)
