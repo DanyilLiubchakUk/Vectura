@@ -22,5 +22,6 @@ Vectura is an open-source project to build a fully automated, AI-assisted stock 
 - Risk limits and trading cooldowns
 
 ## Getting started
+- Create .env.local from .env.example, and isert your keys:
+    - For supabase create your project, get your `NEXT_PUBLIC_SUPABASE_URL`, and `NEXT_PUBLIC_SUPABASE_ANON_KEY` varibles
 - Install dependencies and run dev server: `npm install && npm run dev`
-- Set up env vars for external services (to be documented)
