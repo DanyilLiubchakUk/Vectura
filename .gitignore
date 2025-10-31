@@ -43,3 +43,5 @@ public/secret
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.trigger
