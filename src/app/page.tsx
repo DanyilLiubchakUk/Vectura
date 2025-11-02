@@ -12,8 +12,22 @@ export default function Page() {
             console.error("Error testing connection with supabase:", error);
         }
     };
+    const testAlpaca = async () => {
+        try {
+            const response = await fetch("/api/alpaca");
+            const data = await response.json();
+            if (data.success) {
+                console.log("Current Account:", data.account);
+            } else {
+                console.error("Error fetching Alpaca account:", data.error);
+            }
+        } catch (error) {
+            console.error("Error testing Alpaca connection:", error);
+        }
+    };
     useEffect(() => {
         testConnection();
+        testAlpaca();
     }, [supabase]);
     return (
         <main className="min-h-dvh p-6">

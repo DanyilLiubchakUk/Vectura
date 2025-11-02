@@ -25,5 +25,6 @@ Vectura is an open-source project to build a fully automated, AI-assisted stock 
 - Create .env.local from .env.example, and isert your keys:
     - For supabase create your project, get your `NEXT_PUBLIC_SUPABASE_URL`, and `NEXT_PUBLIC_SUPABASE_ANON_KEY` varibles
     - For Trigger.dev add `TRIGGER_SECRET_KEY` from their dashboard. Make sure that `trigger.config.ts` has in `syncEnvVars` funciton all of your environment varibles, to have them on cloud. And `TRIGGER_PROJECT_REF` from dashboard `Tasks` tab: it shoud say you to run: `npx trigger.dev@latest init -p TRIGGER_PROJECT_REF`, where the `TRIGGER_PROJECT_REF` is `proj_(20 charecters)`
+    - For Alpaca, create Trading account, and get your `Endpoint`, `Key`, and `Secret`, make sure that `Endpoit` ends with no `v2/`, as I understand the SDK adds it automatically in 3 version.
 - Install dependencies and run dev server: `npm install && npm run dev`
 - When need to deploy new version of scheduled cron, run `npx trigger.dev@latest deploy` (select to update versions if promted)
