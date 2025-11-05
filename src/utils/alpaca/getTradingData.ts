@@ -53,6 +53,19 @@ export type TaccountInfo = {
     intraday_adjustments: string;
     pending_reg_taf_fees: string;
 };
+export type TfilteredAccountInfo = {
+    buying_power: string;
+    daytrading_buying_power: string;
+    effective_buying_power: string;
+    non_marginable_buying_power: string;
+    cash: string;
+    accrued_fees: string;
+    portfolio_value: string;
+    shorting_enabled: boolean;
+    equity: string;
+    daytrade_count: number;
+    pending_reg_taf_fees: string;
+};
 export type Torder = {
     id: string;
     client_order_id: string;
@@ -90,6 +103,19 @@ export type Torder = {
     subtag: any;
     source: string;
     expires_at: string;
+};
+export type TfilteredOrder = {
+    id: string;
+    client_order_id: string;
+    created_at: string;
+    updated_at: string;
+    submitted_at: string;
+    filled_at: string;
+    symbol: string;
+    qty: string;
+    filled_avg_price: string;
+    side: string;
+    status: string;
 };
 export type Tclock = {
     is_open: boolean;
@@ -138,6 +164,44 @@ export async function getAccountInfo(): Promise<{
     }
 }
 
+export async function getFilteredAccountInfo(): Promise<{
+    data?: TfilteredAccountInfo;
+    success: boolean;
+    error?: any;
+}> {
+    const result = await getAccountInfo();
+    const fullAccountInfo = result.data;
+
+    let filteredAccountInfo: TfilteredAccountInfo;
+
+    if (result.success && fullAccountInfo) {
+        filteredAccountInfo = {
+            buying_power: fullAccountInfo.buying_power,
+            daytrading_buying_power: fullAccountInfo.daytrading_buying_power,
+            effective_buying_power: fullAccountInfo.effective_buying_power,
+            non_marginable_buying_power:
+                fullAccountInfo.non_marginable_buying_power,
+            cash: fullAccountInfo.cash,
+            accrued_fees: fullAccountInfo.accrued_fees,
+            portfolio_value: fullAccountInfo.portfolio_value,
+            shorting_enabled: fullAccountInfo.shorting_enabled,
+            equity: fullAccountInfo.equity,
+            daytrade_count: fullAccountInfo.daytrade_count,
+            pending_reg_taf_fees: fullAccountInfo.pending_reg_taf_fees,
+        };
+    } else {
+        return {
+            success: false,
+            error: result.error,
+        };
+    }
+
+    return {
+        data: filteredAccountInfo,
+        success: true,
+    };
+}
+
 export async function getOrderStatusById(orderId: string): Promise<{
     data?: { order: Torder; status: string; successStatus: boolean };
     success: boolean;
@@ -154,6 +218,47 @@ export async function getOrderStatusById(orderId: string): Promise<{
     } catch (error) {
         return { success: false, error };
     }
+}
+
+export async function getFilteredOrderStatusById(orderId: string): Promise<{
+    data?: {
+        order: TfilteredOrder;
+        status: string;
+        successStatus: boolean;
+    };
+    success: boolean;
+    error?: any;
+}> {
+    const result = await getOrderStatusById(orderId);
+    const fullOrderStatusById = result.data?.order;
+
+    let filteredOrderStatusById: TfilteredOrder;
+
+    if (result.success && fullOrderStatusById && result.data) {
+        filteredOrderStatusById = {
+            id: fullOrderStatusById.id,
+            client_order_id: fullOrderStatusById.client_order_id,
+            created_at: fullOrderStatusById.created_at,
+            updated_at: fullOrderStatusById.updated_at,
+            submitted_at: fullOrderStatusById.submitted_at,
+            filled_at: fullOrderStatusById.filled_at,
+            symbol: fullOrderStatusById.symbol,
+            qty: fullOrderStatusById.qty,
+            filled_avg_price: fullOrderStatusById.filled_avg_price,
+            side: fullOrderStatusById.side,
+            status: fullOrderStatusById.status,
+        };
+    } else {
+        return { success: false, error: result.error };
+    }
+    return {
+        data: {
+            order: filteredOrderStatusById,
+            status: fullOrderStatusById.status,
+            successStatus: result.data.successStatus,
+        },
+        success: true,
+    };
 }
 
 export async function getOpenOrders(): Promise<{
@@ -176,6 +281,41 @@ export async function getOpenOrders(): Promise<{
     } catch (error) {
         return { success: false, error };
     }
+}
+
+export async function getFilteredOpenOrders(): Promise<{
+    data?: TfilteredOrder[];
+    success: boolean;
+    error?: any;
+}> {
+    const result = await getOpenOrders();
+    const fullOpenOrders = result.data;
+
+    let filteredOpenOrders: TfilteredOrder[] = [];
+
+    if (result.success && fullOpenOrders) {
+        fullOpenOrders.forEach((order) => {
+            filteredOpenOrders.push({
+                id: order.id,
+                client_order_id: order.client_order_id,
+                created_at: order.created_at,
+                updated_at: order.updated_at,
+                submitted_at: order.submitted_at,
+                filled_at: order.filled_at,
+                symbol: order.symbol,
+                qty: order.qty,
+                filled_avg_price: order.filled_avg_price,
+                side: order.side,
+                status: order.status,
+            });
+        });
+    } else {
+        return { success: false, error: result.error };
+    }
+    return {
+        data: filteredOpenOrders,
+        success: true,
+    };
 }
 
 export async function getMarketClock(): Promise<{
