@@ -1,4 +1,6 @@
 import Alpaca from "@/utils/alpaca";
+import { Eorder } from "@/types/alpaca";
+import { AlpacaSnapshot } from "@alpacahq/alpaca-trade-api/dist/resources/datav2/entityv2";
 
 export type Tbar = {
     ClosePrice: number;
@@ -123,13 +125,36 @@ export type Tclock = {
     next_open: string;
     timestamp: string;
 };
+export type Tfilteredsnapshot = {
+    symbol: string;
+    timestamp: string;
+    price: number;
+    minuteVolume: number;
+    dayVolume: number;
+    prevDayVolume: number;
+    minuteVwap: number;
+    dayVwap: number;
+    prevDayVwap: number;
+    minuteTradeCount: number;
+    dayTradeCount: number;
+    prevDayTradeCount: number;
+    bidPrice: number;
+    askPrice: number;
+    spread: number;
+    midPrice: number;
+    closePriceChange: number;
+    closePrecentChange: number;
+    openPriceChange: number;
+    openPrecentChange: number;
+};
 
 export async function getBars(
     symbol: string,
-    start: string,
-    end: string,
     timeframe: string,
-    limit: number
+    limit: number,
+    sort: Eorder = Eorder.Desc,
+    start: string,
+    end?: string
 ): Promise<{ data?: Tbar[]; success: boolean; error?: any }> {
     try {
         const requestBody = {
@@ -137,6 +162,7 @@ export async function getBars(
             end, // "2022-04-02"
             timeframe, // Alpaca.newTimeframe(30, Alpaca.timeframeUnit.MIN)
             limit, // 2
+            sort, // "desc"
         };
         const bars = await Alpaca.getBarsV2(symbol, requestBody);
         const got: Tbar[] = [];
@@ -330,4 +356,72 @@ export async function getMarketClock(): Promise<{
     } catch (error) {
         return { success: false, error };
     }
+}
+
+export async function getSnapshot(symbol: string): Promise<{
+    data?: AlpacaSnapshot & { symbol?: string };
+    success: boolean;
+    error?: any;
+}> {
+    try {
+        const snapshot = await Alpaca.getSnapshot(symbol);
+
+        return { data: snapshot, success: true };
+    } catch (error) {
+        return { success: false, error };
+    }
+}
+
+export async function getFilteredSnapshot(
+    symbol: string
+): Promise<{ data?: Tfilteredsnapshot; success: boolean; error?: any }> {
+    const result = await getSnapshot(symbol);
+    const fullSnapshot = result.data;
+
+    let filteredSnapshot: Tfilteredsnapshot;
+
+    if (result.success && fullSnapshot && fullSnapshot.symbol) {
+        filteredSnapshot = {
+            symbol: fullSnapshot.symbol,
+            timestamp: fullSnapshot.MinuteBar.Timestamp,
+            price: fullSnapshot.LatestTrade.Price,
+            minuteVolume: fullSnapshot.MinuteBar.Volume,
+            dayVolume: fullSnapshot.DailyBar.Volume,
+            prevDayVolume: fullSnapshot.PrevDailyBar.Volume,
+            minuteVwap: fullSnapshot.MinuteBar.VWAP,
+            dayVwap: fullSnapshot.DailyBar.VWAP,
+            prevDayVwap: fullSnapshot.PrevDailyBar.VWAP,
+            minuteTradeCount: fullSnapshot.MinuteBar.TradeCount,
+            dayTradeCount: fullSnapshot.DailyBar.TradeCount,
+            prevDayTradeCount: fullSnapshot.PrevDailyBar.TradeCount,
+            bidPrice: fullSnapshot.LatestQuote.BidPrice,
+            askPrice: fullSnapshot.LatestQuote.AskPrice,
+            spread:
+                fullSnapshot.LatestQuote.AskPrice -
+                fullSnapshot.LatestQuote.BidPrice,
+            midPrice:
+                (fullSnapshot.LatestQuote.BidPrice +
+                    fullSnapshot.LatestQuote.AskPrice) /
+                2,
+            closePriceChange:
+                fullSnapshot.DailyBar.ClosePrice -
+                fullSnapshot.PrevDailyBar.ClosePrice,
+            closePrecentChange:
+                ((fullSnapshot.DailyBar.ClosePrice -
+                    fullSnapshot.PrevDailyBar.ClosePrice) /
+                    fullSnapshot.PrevDailyBar.ClosePrice) *
+                100,
+            openPriceChange:
+                fullSnapshot.LatestTrade.Price -
+                fullSnapshot.PrevDailyBar.ClosePrice,
+            openPrecentChange:
+                ((fullSnapshot.LatestTrade.Price -
+                    fullSnapshot.PrevDailyBar.ClosePrice) /
+                    fullSnapshot.PrevDailyBar.ClosePrice) *
+                100,
+        };
+    } else {
+        return { success: false, error: result.error };
+    }
+    return { data: filteredSnapshot, success: true };
 }

@@ -35,6 +35,18 @@ export default defineConfig({
                         name: "NEXT_PUBLIC_SUPABASE_ANON_KEY",
                         value: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
                     },
+                    {
+                        name: "APCA_API_BASE_URL",
+                        value: process.env.APCA_API_BASE_URL!,
+                    },
+                    {
+                        name: "APCA_API_KEY_ID",
+                        value: process.env.APCA_API_KEY_ID!,
+                    },
+                    {
+                        name: "APCA_API_SECRET_KEY",
+                        value: process.env.APCA_API_SECRET_KEY!,
+                    },
                 ];
             }),
         ],
