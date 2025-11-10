@@ -5,6 +5,7 @@ import {
     Tfilteredsnapshot,
 } from "@/utils/alpaca/getTradingData";
 import addHistoricalData from "@/utils/supabase/addHistoricalData";
+import getTradedStocks from "@/utils/supabase/getTradedStocks";
 
 export const schedule = schedules.task({
     id: "add-data",
@@ -38,8 +39,16 @@ export const schedule = schedules.task({
 
             console.log("Market is open");
 
-            // TODO: Fetch stock symbols from Supabase
-            const stockSymbols: string[] = ["TQQQ"];
+            const tradedStocksResult = await getTradedStocks();
+            if (!tradedStocksResult.success) {
+                logger.log("Failure getting traded stocks", {
+                    error: tradedStocksResult.error,
+                });
+            }
+            let stockSymbols: string[] = [];
+            if (tradedStocksResult.data) {
+                stockSymbols = tradedStocksResult.data;
+            }
 
             const results: {
                 symbol: string;

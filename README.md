@@ -51,3 +51,4 @@ Vectura is an open-source project to build a fully automated, AI-assisted stock 
     - `openPriceChange` - float8
     - `openPrecentChange` - float8
 - Then add policy to that table to acces it
+- In Supabase create table with name `tradedStocks` and 1 column `name` of text. Add policy to it as in `historicalData` table.
