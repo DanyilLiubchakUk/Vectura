@@ -52,3 +52,28 @@ Vectura is an open-source project to build a fully automated, AI-assisted stock 
     - `openPrecentChange` - float8
 - Then add policy to that table to acces it
 - In Supabase create table with name `tradedStocks` and 1 column `name` of text. Add policy to it as in `historicalData` table.
+- To create tables for syncing bars with Supabase, run this command in the SQL editor: 
+  ```sql
+  CREATE TABLE IF NOT EXISTS public.bars_daily (
+    symbol text NOT NULL,
+    day date NOT NULL,
+    data bytea NOT NULL,
+    records int NOT NULL,
+    start_ts bigint NOT NULL,
+    end_ts bigint NOT NULL,
+    created_at timestamptz DEFAULT now(),
+    PRIMARY KEY (symbol, day)
+  );
+  CREATE INDEX IF NOT EXISTS idx_bars_daily_symbol_day ON public.bars_daily (symbol, day);
+
+  CREATE TABLE IF NOT EXISTS public.symbol_ranges (
+    symbol text PRIMARY KEY,
+    have_from date,
+    have_to date,
+    first_available_day date,
+    updated_at timestamptz DEFAULT now(),
+    splits jsonb NOT NULL DEFAULT '[]'::jsonb,
+    last_split_check date
+  );
+  ```
+- Create API key at https://www.alphavantage.co/support/#api-key to apply stock splits. And `ALPHA_VANTAGE_API_KEY` varible that you get from alphavantage.

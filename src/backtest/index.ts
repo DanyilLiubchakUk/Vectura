@@ -1,6 +1,8 @@
 import readline from "readline";
 import Ealgorighms from "@/utils/trading/algorithms/dictionary";
 import engine from "@/backtest/engine";
+import { validateDateRange } from "@/backtest/storage/rangeManager";
+import { readSymbolRange } from "@/utils/supabase/backtestStorage";
 
 const rl = readline.createInterface({
     input: process.stdin,
@@ -16,8 +18,8 @@ function askQuestion(query: string): Promise<string> {
 const defaultArgs = {
     stock: "TQQQ",
     algorithm: Ealgorighms.GridV0,
-    startDate: "2025-01-01", 
-    endDate: "2025-11-01",
+    startDate: "2024-01-01",
+    endDate: "2025-01-01",
     startCapital: 1000,
 };
 
@@ -132,6 +134,22 @@ async function getArguments() {
 (async () => {
     const { stock, algorithm, startDate, endDate, startCapital } =
         await getArguments();
+
+    console.log("Validating date range...");
+    const symbolRange = await readSymbolRange(stock);
+    const firstAvailableDay = symbolRange?.first_available_day ?? null;
+
+    try {
+        validateDateRange(startDate, endDate, firstAvailableDay);
+    } catch (error) {
+        rl.close();
+        if (error instanceof Error) {
+            console.error("❌ Validation Error:", error.message);
+            process.exit(1);
+        }
+        throw error;
+    }
+
     rl.close();
 
     console.log("Running backtest with the following parameters:");

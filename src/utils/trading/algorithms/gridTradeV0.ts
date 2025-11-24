@@ -1,5 +1,4 @@
 import {
-    getBarByTimeWithCursor,
     addBuyOrder,
     addSellOrder,
     markOrderAsBought,
@@ -24,13 +23,9 @@ const Xl = 200; // Dollar amount should not go lower on the account(once allowed
 export default async function gridTradeV0(
     stock: string,
     backtesting: boolean = false,
+    currentPrice: number,
     time: string
 ) {
-    const bar = getBarByTimeWithCursor(stock, time);
-    if (bar === undefined) {
-        return;
-    }
-    const currentPrice = bar.ClosePrice;
     let tradeHistory = readBacktestFile(stock);
     let capital = getGlobalCapital();
 

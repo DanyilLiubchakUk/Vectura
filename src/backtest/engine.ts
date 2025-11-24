@@ -3,12 +3,9 @@ import gridTradeV0, {
     firstAction as GridTradeV0FA,
 } from "@/utils/trading/algorithms/gridTradeV0";
 import {
-    addBarData,
-    getNextAvailableData,
-    getBarByTimeWithCursor,
-    isDBhasStockData,
-    initializeCapital,
-} from "@/backtest/csvStorage";
+    ensureSymbolRange,
+    dayBlobsToMinuteBars,
+} from "@/backtest/minuteBarStorage";
 
 export default async function engine(
     stock: string,
@@ -18,40 +15,47 @@ export default async function engine(
     startCapital: number,
     backtestTime?: string
 ): Promise<void> {
-    initializeCapital(startCapital);
+    const engineStartTime = new Date();
 
-    let engineStartTime = new Date();
+    const startBoundary = new Date(startDate);
+    startBoundary.setUTCHours(14, 30, 0, 0);
+    const endBoundary = new Date(endDate);
+    endBoundary.setUTCHours(21, 0, 0, 0);
+    const startBoundaryIso = startBoundary.toISOString();
+    const endBoundaryIso = endBoundary.toISOString();
+    const desiredStart = backtestTime
+        ? new Date(backtestTime).toISOString()
+        : startBoundaryIso;
 
-    const startDateObj = new Date(startDate);
-    startDateObj.setUTCHours(14, 30, 0, 0);
-    const endDateObj = new Date(endDate);
-    endDateObj.setUTCHours(21, 0, 0, 0);
-    let currentTime = backtestTime ? new Date(backtestTime) : startDateObj;
+    const dayBlobs = await ensureSymbolRange(stock, startDate, endDate);
+    const minuteBars = dayBlobsToMinuteBars(dayBlobs);
+
+    if (!minuteBars.length) {
+        console.warn(
+            `Minute bars for ${stock} are unavailable for intervals ${startDate} through ${endDate}`
+        );
+        return;
+    }
+
+    const startIndex = minuteBars.findIndex(
+        (bar) => bar.timestamp >= desiredStart
+    );
+    if (startIndex === -1) {
+        console.warn("[engine] requested start time is beyond available data", {
+            desiredStart,
+            lastBar: minuteBars[minuteBars.length - 1],
+        });
+        return;
+    }
 
     let firstTime = true;
+    let currentIndex = startIndex;
+    const totalBars = minuteBars.length;
 
-    while (currentTime < endDateObj) {
-        const timeStr = currentTime.toISOString().replace(".000Z", "Z");
-        const currentDate = timeStr.split("T")[0];
-
-        if (!isDBhasStockData(stock, currentDate)) {
-            // we know for sure that the data in not in the file, because file name does not include the date
-            try {
-                const bars = await getNextAvailableData(stock, timeStr);
-                await addBarData(bars, stock, timeStr);
-            } catch {
-                currentTime.setUTCDate(currentTime.getUTCDate() + 1);
-                currentTime.setUTCHours(14, 30, 0, 0);
-                continue;
-            }
-        }
-
-        const bar = getBarByTimeWithCursor(stock, timeStr);
-        if (!bar) {
-            // still no data even after trying to add the data above. Market is close today, going to the next day
-            currentTime.setUTCDate(currentTime.getUTCDate() + 1);
-            currentTime.setUTCHours(14, 30, 0, 0);
-            continue;
+    while (currentIndex < totalBars) {
+        const bar = minuteBars[currentIndex];
+        if (bar.timestamp >= endBoundaryIso) {
+            break;
         }
 
         // running algorithm
@@ -60,11 +64,11 @@ export default async function engine(
                 GridTradeV0FA(
                     firstTime,
                     stock,
-                    bar.ClosePrice,
+                    bar.close,
                     startCapital,
-                    timeStr
+                    bar.timestamp
                 );
-                await gridTradeV0(stock, true, timeStr);
+                await gridTradeV0(stock, true, bar.close, bar.timestamp);
                 break;
 
             default:
@@ -72,23 +76,18 @@ export default async function engine(
                 break;
         }
 
-        currentTime.setUTCMinutes(currentTime.getUTCMinutes() + 1);
-        if (currentTime.getUTCHours() >= 21) {
-            currentTime.setUTCDate(currentTime.getUTCDate() + 1);
-            currentTime.setUTCHours(14, 30, 0, 0);
-        }
         firstTime = false;
+        currentIndex += 1;
     }
 
-    let engineEndTime = new Date();
+    const engineEndTime = new Date();
+    const diffMs = engineEndTime.getTime() - engineStartTime.getTime();
 
-    let diffMs = engineEndTime.getTime() - engineStartTime.getTime();
+    const runningHours = Math.floor(diffMs / 3600000);
+    const runningMinutes = Math.floor((diffMs % 3600000) / 60000);
+    const runningSeconds = Math.floor((diffMs % 60000) / 1000);
 
-    let runningHours = Math.floor(diffMs / 3600000);
-    let runningMinutes = Math.floor((diffMs % 3600000) / 60000);
-    let runningSeconds = Math.floor((diffMs % 60000) / 1000);
-
-    let formatted = `${String(runningHours).padStart(2, "0")}:${String(
+    const formatted = `${String(runningHours).padStart(2, "0")}:${String(
         runningMinutes
     ).padStart(2, "0")}:${String(runningSeconds).padStart(2, "0")}`;
 
