@@ -1,11 +1,10 @@
 import Ealgorighms from "@/utils/trading/algorithms/dictionary";
-import gridTradeV0, {
-    firstAction as GridTradeV0FA,
-} from "@/utils/trading/algorithms/gridTradeV0";
+import gridTradeV0 from "@/utils/trading/algorithms/gridTradeV0";
 import {
     ensureSymbolRange,
     dayBlobsToMinuteBars,
 } from "@/backtest/minuteBarStorage";
+import { initializeBacktest } from "@/backtest/backtestState";
 
 export default async function engine(
     stock: string,
@@ -15,6 +14,8 @@ export default async function engine(
     startCapital: number,
     backtestTime?: string
 ): Promise<void> {
+    initializeBacktest(stock, startDate, endDate, startCapital);
+
     const engineStartTime = new Date();
 
     const startBoundary = new Date(startDate);
@@ -48,7 +49,6 @@ export default async function engine(
         return;
     }
 
-    let firstTime = true;
     let currentIndex = startIndex;
     const totalBars = minuteBars.length;
 
@@ -61,13 +61,6 @@ export default async function engine(
         // running algorithm
         switch (algorithm) {
             case Ealgorighms.GridV0:
-                GridTradeV0FA(
-                    firstTime,
-                    stock,
-                    bar.close,
-                    startCapital,
-                    bar.timestamp
-                );
                 await gridTradeV0(stock, true, bar.close, bar.timestamp);
                 break;
 
@@ -76,7 +69,6 @@ export default async function engine(
                 break;
         }
 
-        firstTime = false;
         currentIndex += 1;
     }
 

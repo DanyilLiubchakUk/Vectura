@@ -1,18 +1,9 @@
 import {
     addBuyOrder,
     addSellOrder,
-    markOrderAsBought,
-    markOrderAsSold,
-    getNeedToBuyOrders,
-    getNeedToSellOrders,
-    BacktestOrder,
-    getGlobalCapital,
-    setCapital,
-    readBacktestFile,
-    cleanCSV,
-    firstOrder,
-    writeBacktestFile,
-} from "@/backtest/csvStorage";
+    updateEquityFromMarket,
+    getActionNeededOrders,
+} from "@/backtest/backtestState";
 
 // Configuration parameters
 const Xc = 5; // Percentage of capital to use per buy (N %)
@@ -26,83 +17,25 @@ export default async function gridTradeV0(
     currentPrice: number,
     time: string
 ) {
-    let tradeHistory = readBacktestFile(stock);
-    let capital = getGlobalCapital();
+    updateEquityFromMarket(currentPrice, time);
 
-    const needToSellOrders = getNeedToSellOrders(tradeHistory, currentPrice);
-    let needToBuyOrders: BacktestOrder[] = [];
-    if (capital > Xl * (1 + Xc / 100)) {
-        needToBuyOrders = getNeedToBuyOrders(tradeHistory, currentPrice);
-    }
+    const { toBuyOrders, toSellOrders } = getActionNeededOrders(
+        currentPrice,
+        time
+    );
 
-    needToSellOrders.forEach((sellOrder) => {
-        const shares = sellOrder.TotalShares;
-        capital += shares * currentPrice;
-        capital = Number(capital.toFixed(8));
-        const nextBuyOn = currentPrice * (1 - Xb / 100);
-        const nextSell = currentPrice * (1 + Xs / 100);
-
+    toBuyOrders.forEach((buyOrder) => {
+        addBuyOrder(Xb, Xs, Xc, Xl, time, currentPrice, buyOrder.id);
+    });
+    toSellOrders.forEach((sellOrder) => {
         addSellOrder(
-            stock,
+            Xb,
+            Xs,
             time,
             currentPrice,
-            shares,
-            nextBuyOn,
-            nextSell
+            sellOrder.id,
+            sellOrder.tradeId,
+            sellOrder.shares
         );
-        markOrderAsSold(stock, sellOrder.Id);
-        setCapital(capital, time);
     });
-    needToBuyOrders.forEach((buyOrder) => {
-        const usedCapital = capital / Xc;
-        if (usedCapital < Xl / Xc) {
-            return;
-        }
-        capital -= usedCapital;
-        capital = Number(capital.toFixed(5));
-
-        const shares = Number((usedCapital / currentPrice).toFixed(5));
-        const nextBuyOn = currentPrice * (1 - Xb / 100);
-        const sellOn = currentPrice * (1 + Xs / 100);
-
-        addBuyOrder(
-            stock,
-            time,
-            currentPrice,
-            shares,
-            nextBuyOn,
-            sellOn,
-            false
-        );
-        markOrderAsBought(stock, buyOrder.Id);
-        setCapital(capital, time);
-    });
-
-    if (needToSellOrders.length || needToBuyOrders.length) {
-        cleanCSV(stock);
-    }
-}
-
-export function firstAction(
-    isFirstTime: boolean,
-    stock: string,
-    startPrice: number,
-    startCapital: number,
-    time: string
-) {
-    if (isFirstTime) {
-        const usedCapital = startCapital / Xc;
-        const remainingCapital = startCapital - usedCapital;
-
-        setCapital(remainingCapital, time);
-
-        const shares = usedCapital / startPrice;
-        const nextBuyOn = startPrice * (1 - Xb / 100);
-        const sellOn = startPrice * (1 + Xs / 100);
-
-        writeBacktestFile(
-            stock,
-            firstOrder(stock, time, startPrice, shares, nextBuyOn, sellOn)
-        );
-    }
 }

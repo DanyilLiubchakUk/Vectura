@@ -15,3 +15,7 @@ export const FETCH_LIMIT = Number(process.env.FETCH_LIMIT ?? 696 * 1.5);
 export const MARKET_OPEN_HOUR_UTC = 14;
 export const MARKET_OPEN_MINUTE_UTC = 30;
 export const MARKET_CLOSE_HOUR_UTC = 21;
+
+export const MAX_PDT_WINDOW = 5;
+export const PDT_EQUITY_THRESHOLD = 25000;
+export const PERCENT_GAP_TO_JOIN = 0.0125;
