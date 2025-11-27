@@ -4,7 +4,13 @@ import {
     ensureSymbolRange,
     dayBlobsToMinuteBars,
 } from "@/backtest/minuteBarStorage";
-import { initializeBacktest } from "@/backtest/backtestState";
+import {
+    initializeBacktest,
+    addExternalCapital,
+} from "@/backtest/backtestState";
+import { addMonths, isDayBeforeOrEqual } from "@/backtest/storage/dateUtils";
+import { loadPersistedDays } from "@/utils/supabase/backtestStorage";
+import { CHUNK_MONTHS } from "@/backtest/constants";
 
 export default async function engine(
     stock: string,
@@ -12,6 +18,8 @@ export default async function engine(
     startDate: string,
     endDate: string,
     startCapital: number,
+    contributionFrequencyDays = 0,
+    contributionAmount = 0,
     backtestTime?: string
 ): Promise<void> {
     initializeBacktest(stock, startDate, endDate, startCapital);
@@ -28,49 +36,109 @@ export default async function engine(
         ? new Date(backtestTime).toISOString()
         : startBoundaryIso;
 
-    const dayBlobs = await ensureSymbolRange(stock, startDate, endDate);
-    const minuteBars = dayBlobsToMinuteBars(dayBlobs);
+    await ensureSymbolRange(stock, startDate, endDate);
 
-    if (!minuteBars.length) {
-        console.warn(
-            `Minute bars for ${stock} are unavailable for intervals ${startDate} through ${endDate}`
+    let chunkStart = startDate;
+    let processedBars = 0;
+    let totalBars = 0;
+
+    let nextContributionDate: Date | null = null;
+    if (contributionFrequencyDays > 0 && contributionAmount > 0) {
+        const firstContribution = new Date(startDate + "T00:00:00Z");
+        firstContribution.setUTCDate(
+            firstContribution.getUTCDate() + contributionFrequencyDays
         );
-        return;
+        nextContributionDate = firstContribution;
     }
 
-    const startIndex = minuteBars.findIndex(
-        (bar) => bar.timestamp >= desiredStart
-    );
-    if (startIndex === -1) {
-        console.warn("[engine] requested start time is beyond available data", {
-            desiredStart,
-            lastBar: minuteBars[minuteBars.length - 1],
-        });
-        return;
-    }
+    while (isDayBeforeOrEqual(chunkStart, endDate)) {
+        let chunkEnd = addMonths(chunkStart, CHUNK_MONTHS);
+        if (!isDayBeforeOrEqual(chunkEnd, endDate)) {
+            chunkEnd = endDate;
+        }
 
-    let currentIndex = startIndex;
-    const totalBars = minuteBars.length;
+        const dayBlobs = await loadPersistedDays(stock, chunkStart, chunkEnd);
+        const minuteBars = dayBlobsToMinuteBars(dayBlobs);
 
-    while (currentIndex < totalBars) {
-        const bar = minuteBars[currentIndex];
-        if (bar.timestamp >= endBoundaryIso) {
+        if (!minuteBars.length) {
+            console.warn(
+                `No minute bars for ${stock} in chunk ${chunkStart} to ${chunkEnd}`
+            );
+            chunkStart = addMonths(chunkStart, CHUNK_MONTHS);
+            continue;
+        }
+
+        totalBars += minuteBars.length;
+
+        let chunkStartIndex = 0;
+        if (chunkStart === startDate) {
+            const index = minuteBars.findIndex(
+                (bar) => bar.timestamp >= desiredStart
+            );
+            if (index === -1) {
+                console.warn(
+                    "[engine] requested start time is beyond available data in first chunk",
+                    {
+                        desiredStart,
+                        firstBar: minuteBars[0],
+                    }
+                );
+                chunkStart = addMonths(chunkStart, CHUNK_MONTHS);
+                continue;
+            }
+            chunkStartIndex = index;
+        }
+
+        let shouldBreak = false;
+        for (let i = chunkStartIndex; i < minuteBars.length; i++) {
+            const bar = minuteBars[i];
+
+            if (bar.timestamp >= endBoundaryIso) {
+                shouldBreak = true;
+                break;
+            }
+
+            if (nextContributionDate) {
+                const barDate = new Date(bar.timestamp);
+
+                while (
+                    nextContributionDate &&
+                    barDate >= nextContributionDate
+                ) {
+                    addExternalCapital(contributionAmount);
+
+                    nextContributionDate = new Date(nextContributionDate);
+                    nextContributionDate.setUTCDate(
+                        nextContributionDate.getUTCDate() +
+                            contributionFrequencyDays
+                    );
+                }
+            }
+
+            // Running algorithm
+            switch (algorithm) {
+                case Ealgorighms.GridV0:
+                    await gridTradeV0(stock, true, bar.close, bar.timestamp);
+                    break;
+
+                default:
+                    console.log("Passed unknown algorithm name");
+                    break;
+            }
+
+            processedBars += 1;
+        }
+
+        if (shouldBreak) {
             break;
         }
 
-        // running algorithm
-        switch (algorithm) {
-            case Ealgorighms.GridV0:
-                await gridTradeV0(stock, true, bar.close, bar.timestamp);
-                break;
-
-            default:
-                console.log("Passed unknown algorithm name");
-                break;
-        }
-
-        currentIndex += 1;
+        chunkStart = addMonths(chunkStart, CHUNK_MONTHS);
     }
+
+    console.log(
+        `[engine] Completed processing ${processedBars} bars (${totalBars} total bars loaded across chunks)`
+    );
 
     const engineEndTime = new Date();
     const diffMs = engineEndTime.getTime() - engineStartTime.getTime();

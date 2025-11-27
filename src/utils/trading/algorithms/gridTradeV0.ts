@@ -6,9 +6,9 @@ import {
 } from "@/backtest/backtestState";
 
 // Configuration parameters
-const Xc = 5; // Percentage of capital to use per buy (N %)
-const Xb = 5; // Percentage below current price to set NextBuyOn (N %)
-const Xs = 5; // Percentage above buy price to set SellOn (N %)
+const Xc = 60; // Percentage of capital to use per buy (N %)
+const Xb = 2; // Percentage below current price to set NextBuyOn (N %)
+const Xs = 18; // Percentage above buy price to set SellOn (N %)
 const Xl = 200; // Dollar amount should not go lower on the account(once allowed) (N $)
 
 export default async function gridTradeV0(

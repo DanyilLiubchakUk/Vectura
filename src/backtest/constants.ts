@@ -10,6 +10,7 @@ export const DAYS_BEFORE_TODAY = Number(process.env.DAYS_BEFORE_TODAY ?? 10);
 export const TIME_BETWEEN_BATCHES = Number(
     process.env.TIME_BETWEEN_BATCHES ?? 200
 );
+export const CHUNK_MONTHS = 3;
 export const FETCH_LIMIT = Number(process.env.FETCH_LIMIT ?? 696 * 1.5);
 
 export const MARKET_OPEN_HOUR_UTC = 14;
@@ -18,4 +19,4 @@ export const MARKET_CLOSE_HOUR_UTC = 21;
 
 export const MAX_PDT_WINDOW = 5;
 export const PDT_EQUITY_THRESHOLD = 25000;
-export const PERCENT_GAP_TO_JOIN = 0.0125;
+export const PERCENT_GAP_TO_JOIN = 1.5; // Lower number - slower,more buys. Higher number - faster, less buys

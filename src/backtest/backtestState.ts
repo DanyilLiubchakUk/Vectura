@@ -34,6 +34,7 @@ export function initializeBacktest(
             cash: initialCapital,
             max: initialCapital,
             equity: initialCapital,
+            investedCash: 0,
         };
 
         return {
@@ -67,10 +68,20 @@ export function updateEquityFromMarket(
         const nextMax = Math.max(currentMax, equity);
 
         if (equity > currentMax) {
-            const base = state.session?.initialCapital ?? 1;
-            const gainPct = ((equity / base) * 100 - 100).toFixed(3);
+            const initialCapital = state.session?.initialCapital ?? 1;
+            const investedCash = state.capital.investedCash;
+            const gainPct =
+                initialCapital > 0
+                    ? ((equity / initialCapital - 1) * 100).toFixed(2)
+                    : "∞";
+
+            const percentMinusInvested =
+                (nextMax / (initialCapital + investedCash) - 1) * 100;
+
             console.log(
-                `${gainPct}% - New maximum capital: ${equity.toFixed(
+                `${percentMinusInvested.toFixed(
+                    2
+                )}% witout ${investedCash}$ invested, and ${gainPct}% with invested - New maximum capital: ${equity.toFixed(
                     2
                 )} on ${formatDay(new Date(timestamp))}`
             );
@@ -159,6 +170,28 @@ export function addSellOrder(
         tradeId
     );
     setCapital(cash);
+}
+
+export function addExternalCapital(amount: number): void {
+    if (amount <= 0) return;
+
+    backtestStore.setState((state) => {
+        if (!state.capital) return state;
+
+        const nextCash = (state.capital.cash ?? 0) + amount;
+        const nextQquity = (state.capital.equity ?? 0) + amount;
+        const nextInvestedCash = (state.capital.investedCash ?? 0) + amount;
+
+        return {
+            ...state,
+            capital: {
+                ...state.capital,
+                cash: nextCash,
+                equity: nextQquity,
+                investedCash: nextInvestedCash,
+            },
+        };
+    });
 }
 
 export function getActionNeededOrders(

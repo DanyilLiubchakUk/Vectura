@@ -21,6 +21,8 @@ const defaultArgs = {
     startDate: "2024-01-01",
     endDate: "2025-01-01",
     startCapital: 1000,
+    contributionFrequencyDays: 7,
+    contributionAmount: 500,
 };
 
 function isValidDate(d: string) {
@@ -32,12 +34,19 @@ function isPositiveNumber(n: number) {
     return !isNaN(Number(n)) && Number(n) > 0;
 }
 
+function isNonNegativeInteger(n: number) {
+    const num = Number(n);
+    return !isNaN(num) && Number.isInteger(num) && num >= 0;
+}
+
 async function getArguments() {
     let stock = process.argv[2];
     let algorithm = process.argv[3];
     let startDate = process.argv[4];
     let endDate = process.argv[5];
     let startCapital = Number(process.argv[6]);
+    let contributionFrequencyDays = Number(process.argv[7]);
+    let contributionAmount = Number(process.argv[8]);
 
     const argsCount = process.argv.length - 2;
 
@@ -57,6 +66,8 @@ async function getArguments() {
             startDate = defaultArgs.startDate;
             endDate = defaultArgs.endDate;
             startCapital = defaultArgs.startCapital;
+            contributionFrequencyDays = defaultArgs.contributionFrequencyDays;
+            contributionAmount = defaultArgs.contributionAmount;
         } else {
             stock =
                 (await askQuestion(`Enter stock symbol (e.g., AAPL): `)) ||
@@ -82,6 +93,25 @@ async function getArguments() {
                         )
                     ) || defaultArgs.startCapital;
             } while (!isPositiveNumber(startCapital));
+            do {
+                contributionFrequencyDays =
+                    Number(
+                        await askQuestion(
+                            `Enter contribution frequency in days (0 to disable): `
+                        )
+                    ) ?? defaultArgs.contributionFrequencyDays;
+            } while (!isNonNegativeInteger(contributionFrequencyDays));
+            do {
+                contributionAmount =
+                    Number(
+                        await askQuestion(
+                            `Enter contribution amount per contribution (0 to disable): `
+                        )
+                    ) ?? defaultArgs.contributionAmount;
+            } while (
+                Number.isNaN(contributionAmount) ||
+                contributionAmount < 0
+            );
         }
     } else {
         // Some args are missing or of wrong type
@@ -126,14 +156,63 @@ async function getArguments() {
             } while (!isPositiveNumber(startCapital));
             needPrompt = true;
         }
+        if (
+            (!Number.isFinite(contributionFrequencyDays) &&
+                contributionFrequencyDays !== 0) ||
+            !isNonNegativeInteger(contributionFrequencyDays)
+        ) {
+            do {
+                contributionFrequencyDays =
+                    Number(
+                        await askQuestion(
+                            `Enter contribution frequency in days (0 to disable): `
+                        )
+                    ) ?? defaultArgs.contributionFrequencyDays;
+            } while (!isNonNegativeInteger(contributionFrequencyDays));
+            needPrompt = true;
+        }
+        if (
+            (!Number.isFinite(contributionAmount) &&
+                contributionAmount !== 0) ||
+            Number.isNaN(contributionAmount) ||
+            contributionAmount < 0
+        ) {
+            do {
+                contributionAmount =
+                    Number(
+                        await askQuestion(
+                            `Enter contribution amount per contribution (0 to disable): `
+                        )
+                    ) ?? defaultArgs.contributionAmount;
+            } while (
+                Number.isNaN(contributionAmount) ||
+                contributionAmount < 0
+            );
+            needPrompt = true;
+        }
     }
 
-    return { stock, algorithm, startDate, endDate, startCapital };
+    return {
+        stock,
+        algorithm,
+        startDate,
+        endDate,
+        startCapital,
+        contributionFrequencyDays,
+        contributionAmount,
+    };
 }
 
 (async () => {
-    const { stock, algorithm, startDate, endDate, startCapital } =
-        await getArguments();
+    const {
+        stock,
+        algorithm,
+        startDate,
+        endDate,
+        startCapital,
+        contributionFrequencyDays,
+        contributionAmount,
+    } = await getArguments();
 
     console.log("Validating date range...");
     const symbolRange = await readSymbolRange(stock);
@@ -153,12 +232,21 @@ async function getArguments() {
     rl.close();
 
     console.log("Running backtest with the following parameters:");
-    console.log("Stock:            ", stock);
-    console.log("Algorithm:        ", algorithm);
-    console.log("Start Date:       ", startDate);
-    console.log("End Date:         ", endDate);
-    console.log("Starting Capital: ", startCapital);
+    console.log("Stock:             ", stock);
+    console.log("Algorithm:         ", algorithm);
+    console.log("Start Date:        ", startDate);
+    console.log("End Date:          ", endDate);
+    console.log("Starting Capital:  ", startCapital);
+    console.log("Contribution Every:", contributionFrequencyDays, "day(s)");
+    console.log("Per contribution:  ", contributionAmount);
 
-    // Place your main execution logic here
-    engine(stock, algorithm, startDate, endDate, startCapital);
+    engine(
+        stock,
+        algorithm,
+        startDate,
+        endDate,
+        startCapital,
+        contributionFrequencyDays,
+        contributionAmount
+    );
 })();

@@ -16,14 +16,13 @@ export function shouldCheckSplits(lastSplitCheck: string | null): boolean {
         return true;
     }
 
-    const yesterday = new Date();
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-    yesterday.setUTCHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
 
     const lastCheck = new Date(lastSplitCheck);
     lastCheck.setUTCHours(0, 0, 0, 0);
 
-    return lastCheck < yesterday;
+    return lastCheck < today;
 }
 
 function areSplitsEqual(splits1: SplitInfo[], splits2: SplitInfo[]): boolean {

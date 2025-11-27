@@ -10,6 +10,7 @@ export interface IbacktestCapital {
     cash: number;
     max: number;
     equity: number;
+    investedCash: number;
 }
 export interface IbacktestActions {
     toBuy: IorderAction[];

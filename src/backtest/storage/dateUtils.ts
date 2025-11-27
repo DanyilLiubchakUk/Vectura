@@ -31,3 +31,9 @@ export function getTodayMinusDays(days: number): string {
 export function isDayBeforeOrEqual(a: string, b: string): boolean {
     return new Date(a) <= new Date(b);
 }
+
+export function addMonths(day: string, months: number): string {
+    const date = new Date(day + "T00:00:00Z");
+    date.setUTCMonth(date.getUTCMonth() + months);
+    return formatDay(date);
+}
