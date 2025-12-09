@@ -28,30 +28,6 @@ Vectura is an open-source project to build a fully automated, AI-assisted stock 
     - For Alpaca, create Trading account, and get your `Endpoint`, `Key`, and `Secret`, make sure that `Endpoit` ends with no `v2/`, as I understand the SDK adds it automatically in 3 version.
 - Install dependencies and run dev server: `npm install && npm run dev`
 - When need to deploy new version of scheduled cron, run `npx trigger.dev@latest deploy` (select to update versions if promted)
-- In Supabase create table with name `historicalData` and 21 columns like this:
-    - `id` in gear icon select is Unique
-    - `symbol` - text
-    - `timestamp` - text
-    - `price` - float8
-    - `minuteVolume` - float8
-    - `dayVolume` - float8
-    - `prevDayVolume` - float8
-    - `minuteVwap` - float8
-    - `dayVwap` - float8
-    - `prevDayVwap` - float8
-    - `minuteTradeCount` - float8
-    - `dayTradeCount` - float8
-    - `prevDayTradeCount` - float8
-    - `bidPrice` - float8
-    - `askPrice` - float8
-    - `spread` - float8
-    - `midPrice` - float8
-    - `closePriceChange` - float8
-    - `closePrecentChange` - float8
-    - `openPriceChange` - float8
-    - `openPrecentChange` - float8
-- Then add policy to that table to acces it
-- In Supabase create table with name `tradedStocks` and 1 column `name` of text. Add policy to it as in `historicalData` table.
 - To create tables for syncing bars with Supabase, run this command in the SQL editor: 
   ```sql
   CREATE TABLE IF NOT EXISTS public.bars_daily (
@@ -77,3 +53,60 @@ Vectura is an open-source project to build a fully automated, AI-assisted stock 
   );
   ```
 - Create API key at https://www.alphavantage.co/support/#api-key to apply stock splits. And `ALPHA_VANTAGE_API_KEY` varible that you get from alphavantage.
+- To run auto-trade, you need to create these tables with indexes: 
+  ```sql
+  CREATE TABLE IF NOT EXISTS public.at_trade_summary (
+    symbol text PRIMARY KEY NOT NULL,
+    max_cash numeric NOT NULL,
+    max_equity numeric NOT NULL,
+    splits_last_updated_at date,
+    splits jsonb NOT NULL DEFAULT '[]'::jsonb,
+    pdt_days jsonb NOT NULL DEFAULT '[]'::jsonb,
+    session_start text,
+    session_end text
+  );
+  CREATE TABLE IF NOT EXISTS public.at_trade_history (
+    id text PRIMARY KEY NOT NULL,
+    timestamp text,
+    trade_type text,
+    shares numeric,
+    price numeric,
+    close_trade_id text
+  );
+  CREATE INDEX IF NOT EXISTS idx_at_trade_history ON public.at_trade_history (id, timestamp);
+
+  CREATE TABLE IF NOT EXISTS public.at_to_buy (
+    id text PRIMARY KEY NOT NULL,
+    at_price numeric,
+    below_or_higher text
+  );
+  CREATE INDEX IF NOT EXISTS idx_at_to_buy ON public.at_to_buy (id, at_price);
+
+  CREATE TABLE IF NOT EXISTS public.at_to_sell (
+    id text PRIMARY KEY NOT NULL,
+    at_price numeric,
+    below_or_higher text,
+    shares numeric,
+    trade_id text NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_at_to_sell ON public.at_to_sell (id, trade_id, at_price);
+
+  CREATE TABLE IF NOT EXISTS public.at_open_trades (
+    id text PRIMARY KEY NOT NULL,
+    timestamp text NOT NULL,
+    price numeric NOT NULL,
+    shares numeric NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_at_open_trades ON public.at_open_trades (id, timestamp);
+
+  CREATE TABLE IF NOT EXISTS public.at_algo_config (
+    symbol text NOT NULL,
+    algorithm text NOT NULL,
+    xc numeric NOT NULL, -- percentage of capital to use per buy
+    xb numeric NOT NULL, -- percentage below current price to set next buy
+    xs numeric NOT NULL, -- percentage above buy price to set sell
+    xl numeric NOT NULL, -- minimum cash floor that should remain in account
+    updated_at timestamptz DEFAULT now(),
+    PRIMARY KEY (symbol, algorithm)
+  );
+  ```
