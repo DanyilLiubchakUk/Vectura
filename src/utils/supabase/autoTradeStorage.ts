@@ -129,10 +129,11 @@ export async function getAlgoConfigOrDefault(): Promise<{
     Xb: number;
     Xs: number;
     Xl: number;
+    Xg: number;
 }> {
     const { data, error } = await supabase
         .from("at_algo_config")
-        .select("xc, xb, xs, xl")
+        .select("xc, xb, xs, xl, xg")
         .eq("symbol", TRADE_SYMBOL)
         .eq("algorithm", TRADING_ALGORITHM)
         .maybeSingle();
@@ -150,6 +151,7 @@ export async function getAlgoConfigOrDefault(): Promise<{
             xb: GRID_TRADE_V0_DEFAULT_CONFIG.Xb,
             xs: GRID_TRADE_V0_DEFAULT_CONFIG.Xs,
             xl: GRID_TRADE_V0_DEFAULT_CONFIG.Xl,
+            xg: GRID_TRADE_V0_DEFAULT_CONFIG.Xg,
         });
 
         if (insertResult.error) {
@@ -167,6 +169,7 @@ export async function getAlgoConfigOrDefault(): Promise<{
         Xb: Number(data.xb ?? GRID_TRADE_V0_DEFAULT_CONFIG.Xb),
         Xs: Number(data.xs ?? GRID_TRADE_V0_DEFAULT_CONFIG.Xs),
         Xl: Number(data.xl ?? GRID_TRADE_V0_DEFAULT_CONFIG.Xl),
+        Xg: Number(data.xg ?? GRID_TRADE_V0_DEFAULT_CONFIG.Xg),
     };
 }
 export async function updateSplitsInDatabase(

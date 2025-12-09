@@ -19,6 +19,7 @@ export interface BuyOrderData {
     toSell: number;
     price: number;
     buyAtId: string;
+    Xg?: number;
 }
 
 export function executeBuyOrder(orderData: BuyOrderData): void {
@@ -50,12 +51,15 @@ export function executeBuyOrder(orderData: BuyOrderData): void {
             "higher"
         );
 
-        const filteredToBuy = filterToBuyActions([
-            ...state.actions.toBuy.filter(
-                (buyAt) => buyAt.id !== orderData.buyAtId
-            ),
-            followUpBuyAction,
-        ]);
+        const filteredToBuy = filterToBuyActions(
+            [
+                ...state.actions.toBuy.filter(
+                    (buyAt) => buyAt.id !== orderData.buyAtId
+                ),
+                followUpBuyAction,
+            ],
+            orderData.Xg
+        );
 
         const newState = {
             ...state,
@@ -87,7 +91,8 @@ export function executeSellOrder(
     timestamp: string,
     toBuy: [number, number],
     sellActionId: string,
-    tradeId: string
+    tradeId: string,
+    Xg?: number
 ): void {
     backtestStore.setState((state) => {
         const newTrade: Itrade = {
@@ -113,11 +118,10 @@ export function executeSellOrder(
         const buyBelowAction = createBuyOrderAction(toBuy[0], "below");
         const buyAboveAction = createBuyOrderAction(toBuy[1], "higher");
 
-        const filteredToBuy = filterToBuyActions([
-            ...state.actions.toBuy,
-            buyBelowAction,
-            buyAboveAction,
-        ]);
+        const filteredToBuy = filterToBuyActions(
+            [...state.actions.toBuy, buyBelowAction, buyAboveAction],
+            Xg
+        );
 
         const newState = {
             ...state,

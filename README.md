@@ -106,6 +106,7 @@ Vectura is an open-source project to build a fully automated, AI-assisted stock 
     xb numeric NOT NULL, -- percentage below current price to set next buy
     xs numeric NOT NULL, -- percentage above buy price to set sell
     xl numeric NOT NULL, -- minimum cash floor that should remain in account
+    xg numeric NOT NULL, -- percent gap to join orders (N %), use -1 to disable filtering
     updated_at timestamptz DEFAULT now(),
     PRIMARY KEY (symbol, algorithm)
   );

@@ -44,7 +44,8 @@ export async function addBuyOrder(
     Xl: number,
     time: string,
     currentPrice: number,
-    buyAtId: string
+    buyAtId: string,
+    Xg: number
 ): Promise<{
     price: number;
     shares: number;
@@ -59,7 +60,8 @@ export async function addBuyOrder(
             Xl,
             time,
             currentPrice,
-            buyAtId
+            buyAtId,
+            Xg
         );
     }
 }
@@ -71,7 +73,8 @@ export async function addSellOrder(
     currentPrice: number,
     sellActionId: string,
     tradeId: string,
-    shares: number
+    shares: number,
+    Xg: number
 ): Promise<{
     price: number;
     shares: number;
@@ -94,7 +97,8 @@ export async function addSellOrder(
             currentPrice,
             sellActionId,
             tradeId,
-            shares
+            shares,
+            Xg
         );
     }
 }

@@ -36,6 +36,7 @@ interface BuyOrderData {
     toSell: number;
     price: number;
     buyAtId: string;
+    Xg?: number;
 }
 
 export async function updateStore(time: string) {
@@ -155,7 +156,8 @@ export async function addAutoTradeBuyOrder(
     Xl: number,
     timestamp: string,
     price: number,
-    buyAtId: string
+    buyAtId: string,
+    Xg?: number
 ): Promise<{ price: number; shares: number } | null> {
     // Check trading allowed first
     if (!(await isTradingAllowed(timestamp, "buy"))) {
@@ -185,6 +187,7 @@ export async function addAutoTradeBuyOrder(
         toSell,
         price,
         buyAtId,
+        Xg,
     };
 
     const result = await executeBuyOrder(orderData);
@@ -198,7 +201,8 @@ export async function addAutoTradeSellOrder(
     price: number,
     sellActionId: string,
     tradeId: string,
-    shares: number
+    shares: number,
+    Xg: number
 ): Promise<{ price: number; shares: number } | null> {
     // Check trading allowed first
     if (!(await isTradingAllowed(timestamp, "sell", tradeId))) {
@@ -220,7 +224,8 @@ export async function addAutoTradeSellOrder(
         timestamp,
         [downPrice, upPrice],
         sellActionId,
-        tradeId
+        tradeId,
+        Xg
     );
     setCapital(cash);
     return result;
@@ -292,10 +297,10 @@ async function executeBuyOrder(
     const currentToBuy = state.actions.toBuy.filter(
         (buyAt) => buyAt.id !== orderData.buyAtId
     );
-    const filteredToBuy = filterToBuyActions([
-        ...currentToBuy,
-        followUpBuyAction,
-    ]);
+    const filteredToBuy = filterToBuyActions(
+        [...currentToBuy, followUpBuyAction],
+        orderData.Xg
+    );
 
     // Save to database
     await saveTradeHistory(newTrade);
@@ -341,7 +346,8 @@ async function executeSellOrder(
     timestamp: string,
     toBuy: [number, number],
     sellActionId: string,
-    tradeId: string
+    tradeId: string,
+    Xg?: number
 ): Promise<{ price: number; shares: number }> {
     const orderResult = await placeOrder(TRADE_SYMBOL, shares, EtradeSide.Sell);
 
@@ -389,11 +395,10 @@ async function executeSellOrder(
     const buyAboveAction = createBuyOrderAction(toBuy[1], "higher", timestamp);
 
     // Get current toBuy actions and filter
-    const filteredToBuy = filterToBuyActions([
-        ...state.actions.toBuy,
-        buyBelowAction,
-        buyAboveAction,
-    ]);
+    const filteredToBuy = filterToBuyActions(
+        [...state.actions.toBuy, buyBelowAction, buyAboveAction],
+        Xg
+    );
 
     // Save to database
     await saveTradeHistory(newTrade);

@@ -16,6 +16,7 @@ import {
     roundDown,
     generateOrderId,
 } from "@/backtest/utils/helpers";
+import { GRID_TRADE_V0_DEFAULT_CONFIG } from "@/utils/trading/algorithms/gridTradeV0";
 
 export function initializeBacktest(
     stock: string,
@@ -133,6 +134,7 @@ export function addBuyOrder(
         toSell,
         price,
         buyAtId,
+        Xg: GRID_TRADE_V0_DEFAULT_CONFIG.Xg,
     };
 
     executeBuyOrder(orderData);
@@ -167,7 +169,8 @@ export function addSellOrder(
         timestamp,
         [downPrice, upPrice],
         sellActionId,
-        tradeId
+        tradeId,
+        GRID_TRADE_V0_DEFAULT_CONFIG.Xg
     );
     setCapital(cash);
 }

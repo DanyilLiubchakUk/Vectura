@@ -8,6 +8,10 @@ export function filterToBuyActions(
 ): IorderAction[] {
     if (orders.length === 0) return [];
 
+    if (percentGap === -1) {
+        return orders;
+    }
+
     const sorted = [...orders].sort((a, b) => a.atPrice - b.atPrice);
     const isClose = (a: number, b: number) =>
         (Math.abs(a - b) / a) * 100 <= percentGap;
