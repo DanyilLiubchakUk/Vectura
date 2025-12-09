@@ -12,7 +12,7 @@ export async function readSymbolRange(
     symbol: string
 ): Promise<SymbolRange | null> {
     const { data, error } = await supabase
-        .from("symbol_ranges")
+        .from("bt_symbol_ranges")
         .select("*")
         .eq("symbol", symbol)
         .maybeSingle();
@@ -55,7 +55,7 @@ export async function upsertSymbolRange(
             : existingRange?.first_available_day || null;
 
     const { data, error } = await supabase
-        .from("symbol_ranges")
+        .from("bt_symbol_ranges")
         .upsert(
             {
                 symbol,
@@ -116,7 +116,7 @@ export async function flushBucketToSupabase(
     );
 
     const { error } = await supabase
-        .from("bars_daily")
+        .from("bt_bars_daily")
         .upsert(rows, { onConflict: "symbol,day" });
 
     if (error) {
@@ -156,7 +156,7 @@ export async function loadPersistedDays(
     reqTo: string
 ): Promise<DayBlob[]> {
     const { data, error } = await supabase
-        .from("bars_daily")
+        .from("bt_bars_daily")
         .select("symbol,day,data,records,start_ts,end_ts")
         .eq("symbol", symbol)
         .gte("day", reqFrom)
@@ -234,7 +234,7 @@ export async function loadPersistedDays(
 
 export async function deleteCachedBarsForSymbol(symbol: string): Promise<void> {
     const { error } = await supabase
-        .from("bars_daily")
+        .from("bt_bars_daily")
         .delete()
         .eq("symbol", symbol);
 
@@ -255,7 +255,7 @@ export async function updateSplitsInDatabase(
     lastSplitCheck: string
 ): Promise<void> {
     const { error } = await supabase
-        .from("symbol_ranges")
+        .from("bt_symbol_ranges")
         .update({
             splits: splits,
             last_split_check: lastSplitCheck,
@@ -289,13 +289,13 @@ export async function resetSymbolRangeAfterSplitChange(
         splits: splits,
         last_split_check: lastSplitCheck,
     };
-    
+
     if (firstAvailableDay !== undefined) {
         updateData.first_available_day = firstAvailableDay;
     }
 
     const { error } = await supabase
-        .from("symbol_ranges")
+        .from("bt_symbol_ranges")
         .update(updateData)
         .eq("symbol", symbol);
 
@@ -313,7 +313,7 @@ export async function updateFirstAvailableDay(
     firstAvailableDay: string
 ): Promise<void> {
     const { error } = await supabase
-        .from("symbol_ranges")
+        .from("bt_symbol_ranges")
         .update({ first_available_day: firstAvailableDay })
         .eq("symbol", symbol);
 

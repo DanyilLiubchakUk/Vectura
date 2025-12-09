@@ -28,9 +28,9 @@ Vectura is an open-source project to build a fully automated, AI-assisted stock 
     - For Alpaca, create Trading account, and get your `Endpoint`, `Key`, and `Secret`, make sure that `Endpoit` ends with no `v2/`, as I understand the SDK adds it automatically in 3 version.
 - Install dependencies and run dev server: `npm install && npm run dev`
 - When need to deploy new version of scheduled cron, run `npx trigger.dev@latest deploy` (select to update versions if promted)
-- To create tables for syncing bars with Supabase, run this command in the SQL editor: 
+- To create tables for syncing backtest bars with Supabase, run this command in the SQL editor: 
   ```sql
-  CREATE TABLE IF NOT EXISTS public.bars_daily (
+  CREATE TABLE IF NOT EXISTS public.bt_bars_daily (
     symbol text NOT NULL,
     day date NOT NULL,
     data bytea NOT NULL,
@@ -40,9 +40,9 @@ Vectura is an open-source project to build a fully automated, AI-assisted stock 
     created_at timestamptz DEFAULT now(),
     PRIMARY KEY (symbol, day)
   );
-  CREATE INDEX IF NOT EXISTS idx_bars_daily_symbol_day ON public.bars_daily (symbol, day);
+  CREATE INDEX IF NOT EXISTS idx_bt_bars_daily_symbol_day ON public.bt_bars_daily (symbol, day);
 
-  CREATE TABLE IF NOT EXISTS public.symbol_ranges (
+  CREATE TABLE IF NOT EXISTS public.bt_symbol_ranges (
     symbol text PRIMARY KEY,
     have_from date,
     have_to date,
