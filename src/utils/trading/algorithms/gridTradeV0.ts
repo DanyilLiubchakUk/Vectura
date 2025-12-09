@@ -5,7 +5,13 @@ import {
     addSellOrder,
 } from "@/utils/trading/tradeRouter";
 import { getAlgoConfigOrDefault } from "@/utils/supabase/autoTradeStorage";
-import { GRID_TRADE_V0_DEFAULT_CONFIG } from "@/auto-trade/constants";
+
+export const GRID_TRADE_V0_DEFAULT_CONFIG = {
+    Xc: 60, // Percentage of capital to use per buy (N %)
+    Xb: 2, // Percentage below current price to set NextBuyOn (N %)
+    Xs: 18, // Percentage above buy price to set SellOn (N %)
+    Xl: 200, // Dollar amount cash floor
+} as const;
 
 export default async function gridTradeV0(
     stock: string,

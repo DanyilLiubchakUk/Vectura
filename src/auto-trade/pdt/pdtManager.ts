@@ -1,4 +1,7 @@
-import { MAX_PDT_WINDOW, PDT_EQUITY_THRESHOLD } from "@/auto-trade/constants";
+import {
+    MAX_PDT_WINDOW,
+    PDT_EQUITY_THRESHOLD,
+} from "@/utils/trading/constants";
 import { autoTradeStorage, IpdtDay } from "@/utils/zustand/autoTradeStore";
 import { getOpenTradeById } from "@/utils/supabase/autoTradeStorage";
 import { formatDay } from "@/auto-trade/utils/helpers";

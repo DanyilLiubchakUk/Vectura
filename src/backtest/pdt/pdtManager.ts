@@ -5,7 +5,7 @@ import {
     backtestStore,
 } from "@/utils/zustand/backtestStore";
 import { formatDay } from "@/backtest/storage/dateUtils";
-import { PDT_EQUITY_THRESHOLD, MAX_PDT_WINDOW } from "@/backtest/constants";
+import { PDT_EQUITY_THRESHOLD, MAX_PDT_WINDOW } from "@/utils/trading/constants";
 import { calculateRoundTripsForDay } from "@/backtest/pdt/roundTripCalculator";
 
 export interface FilteredPdtStatus {
