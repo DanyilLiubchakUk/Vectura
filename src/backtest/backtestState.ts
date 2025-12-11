@@ -100,10 +100,10 @@ export function updateEquityFromMarket(
 }
 
 export function addBuyOrder(
-    Xb: number,
-    Xs: number,
-    Xc: number,
-    Xl: number,
+    buyBelowPct: number,
+    sellAbovePct: number,
+    capitalPct: number,
+    cashFloor: number,
     timestamp: string,
     price: number,
     buyAtId: string
@@ -114,16 +114,16 @@ export function addBuyOrder(
 
     const state = backtestStore.getState();
     let cash = state.capital?.cash ?? 0;
-    let useCash = roundDown(cash * (Xc / 100));
+    let useCash = roundDown(cash * (capitalPct / 100));
 
-    if (cash - useCash < Xl) {
+    if (cash - useCash < cashFloor) {
         return;
     }
 
     const shares = roundDown(useCash / price);
     useCash = shares * price;
-    const toBuy = price * (1 - Xb / 100);
-    const toSell = price * (1 + Xs / 100);
+    const toBuy = price * (1 - buyBelowPct / 100);
+    const toSell = price * (1 + sellAbovePct / 100);
     cash -= useCash;
 
     const orderData: BuyOrderData = {
@@ -134,7 +134,7 @@ export function addBuyOrder(
         toSell,
         price,
         buyAtId,
-        Xg: GRID_TRADE_V0_DEFAULT_CONFIG.Xg,
+        orderGapPct: GRID_TRADE_V0_DEFAULT_CONFIG.orderGapPct,
     };
 
     executeBuyOrder(orderData);
@@ -142,8 +142,8 @@ export function addBuyOrder(
 }
 
 export function addSellOrder(
-    Xb: number,
-    Xu: number,
+    buyBelowPct: number,
+    buyAfterSellPct: number,
     timestamp: string,
     price: number,
     sellActionId: string,
@@ -159,8 +159,8 @@ export function addSellOrder(
     const proceeds = price * shares;
     cash += proceeds;
 
-    const downPrice = price * (1 - Xb / 100);
-    const upPrice = price * (1 + Xu / 100);
+    const downPrice = price * (1 - buyBelowPct / 100);
+    const upPrice = price * (1 + buyAfterSellPct / 100);
 
     executeSellOrder(
         generateOrderId(),
@@ -170,7 +170,7 @@ export function addSellOrder(
         [downPrice, upPrice],
         sellActionId,
         tradeId,
-        GRID_TRADE_V0_DEFAULT_CONFIG.Xg
+        GRID_TRADE_V0_DEFAULT_CONFIG.orderGapPct
     );
     setCapital(cash);
 }

@@ -125,16 +125,18 @@ export async function getDBtradingData(time: string): Promise<{
     };
 }
 export async function getAlgoConfigOrDefault(): Promise<{
-    Xc: number;
-    Xb: number;
-    Xs: number;
-    Xu: number;
-    Xl: number;
-    Xg: number;
+    capitalPct: number;
+    buyBelowPct: number;
+    sellAbovePct: number;
+    buyAfterSellPct: number;
+    cashFloor: number;
+    orderGapPct: number;
 }> {
     const { data, error } = await supabase
         .from("at_algo_config")
-        .select("xc, xb, xs, xu, xl, xg")
+        .select(
+            "capital_pct, buy_below_pct, sell_above_pct, buy_after_sell_pct, cash_floor, order_gap_pct"
+        )
         .eq("symbol", TRADE_SYMBOL)
         .eq("algorithm", TRADING_ALGORITHM)
         .maybeSingle();
@@ -148,12 +150,12 @@ export async function getAlgoConfigOrDefault(): Promise<{
         const insertResult = await supabase.from("at_algo_config").insert({
             symbol: TRADE_SYMBOL,
             algorithm: TRADING_ALGORITHM,
-            xc: GRID_TRADE_V0_DEFAULT_CONFIG.Xc,
-            xb: GRID_TRADE_V0_DEFAULT_CONFIG.Xb,
-            xs: GRID_TRADE_V0_DEFAULT_CONFIG.Xs,
-            xu: GRID_TRADE_V0_DEFAULT_CONFIG.Xu,
-            xl: GRID_TRADE_V0_DEFAULT_CONFIG.Xl,
-            xg: GRID_TRADE_V0_DEFAULT_CONFIG.Xg,
+            capital_pct: GRID_TRADE_V0_DEFAULT_CONFIG.capitalPct,
+            buy_below_pct: GRID_TRADE_V0_DEFAULT_CONFIG.buyBelowPct,
+            sell_above_pct: GRID_TRADE_V0_DEFAULT_CONFIG.sellAbovePct,
+            buy_after_sell_pct: GRID_TRADE_V0_DEFAULT_CONFIG.buyAfterSellPct,
+            cash_floor: GRID_TRADE_V0_DEFAULT_CONFIG.cashFloor,
+            order_gap_pct: GRID_TRADE_V0_DEFAULT_CONFIG.orderGapPct,
         });
 
         if (insertResult.error) {
@@ -167,12 +169,25 @@ export async function getAlgoConfigOrDefault(): Promise<{
     }
 
     return {
-        Xc: Number(data.xc ?? GRID_TRADE_V0_DEFAULT_CONFIG.Xc),
-        Xb: Number(data.xb ?? GRID_TRADE_V0_DEFAULT_CONFIG.Xb),
-        Xs: Number(data.xs ?? GRID_TRADE_V0_DEFAULT_CONFIG.Xs),
-        Xu: Number(data.xu ?? GRID_TRADE_V0_DEFAULT_CONFIG.Xu),
-        Xl: Number(data.xl ?? GRID_TRADE_V0_DEFAULT_CONFIG.Xl),
-        Xg: Number(data.xg ?? GRID_TRADE_V0_DEFAULT_CONFIG.Xg),
+        capitalPct: Number(
+            data.capital_pct ?? GRID_TRADE_V0_DEFAULT_CONFIG.capitalPct
+        ),
+        buyBelowPct: Number(
+            data.buy_below_pct ?? GRID_TRADE_V0_DEFAULT_CONFIG.buyBelowPct
+        ),
+        sellAbovePct: Number(
+            data.sell_above_pct ?? GRID_TRADE_V0_DEFAULT_CONFIG.sellAbovePct
+        ),
+        buyAfterSellPct: Number(
+            data.buy_after_sell_pct ??
+                GRID_TRADE_V0_DEFAULT_CONFIG.buyAfterSellPct
+        ),
+        cashFloor: Number(
+            data.cash_floor ?? GRID_TRADE_V0_DEFAULT_CONFIG.cashFloor
+        ),
+        orderGapPct: Number(
+            data.order_gap_pct ?? GRID_TRADE_V0_DEFAULT_CONFIG.orderGapPct
+        ),
     };
 }
 export async function updateSplitsInDatabase(

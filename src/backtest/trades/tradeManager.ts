@@ -19,7 +19,7 @@ export interface BuyOrderData {
     toSell: number;
     price: number;
     buyAtId: string;
-    Xg?: number;
+    orderGapPct?: number;
 }
 
 export function executeBuyOrder(orderData: BuyOrderData): void {
@@ -58,7 +58,7 @@ export function executeBuyOrder(orderData: BuyOrderData): void {
                 ),
                 followUpBuyAction,
             ],
-            orderData.Xg
+            orderData.orderGapPct
         );
 
         const newState = {
@@ -92,7 +92,7 @@ export function executeSellOrder(
     toBuy: [number, number],
     sellActionId: string,
     tradeId: string,
-    Xg?: number
+    orderGapPct?: number
 ): void {
     backtestStore.setState((state) => {
         const newTrade: Itrade = {
@@ -120,7 +120,7 @@ export function executeSellOrder(
 
         const filteredToBuy = filterToBuyActions(
             [...state.actions.toBuy, buyBelowAction, buyAboveAction],
-            Xg
+            orderGapPct
         );
 
         const newState = {

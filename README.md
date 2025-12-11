@@ -102,12 +102,12 @@ Vectura is an open-source project to build a fully automated, AI-assisted stock 
   CREATE TABLE IF NOT EXISTS public.at_algo_config (
     symbol text NOT NULL,
     algorithm text NOT NULL,
-    xc numeric NOT NULL, -- percentage of capital to use per buy
-    xb numeric NOT NULL, -- percentage below current price to set next buy
-    xs numeric NOT NULL, -- percentage above buy price to set sell
-    xu numeric NOT NULL, -- percentage higher to buy more after each sell
-    xl numeric NOT NULL, -- minimum cash floor that should remain in account
-    xg numeric NOT NULL, -- percent gap to join orders (N %), use -1 to disable filtering
+    capital_pct numeric NOT NULL, -- percentage of capital to use per buy
+    buy_below_pct numeric NOT NULL, -- percentage below current price to set next buy
+    sell_above_pct numeric NOT NULL, -- percentage above buy price to set sell
+    buy_after_sell_pct numeric NOT NULL, -- percentage higher to buy more after each sell
+    cash_floor numeric NOT NULL, -- minimum cash floor that should remain in account
+    order_gap_pct numeric NOT NULL, -- percent gap to join orders (N %), use -1 to disable filtering
     updated_at timestamptz DEFAULT now(),
     PRIMARY KEY (symbol, algorithm)
   );

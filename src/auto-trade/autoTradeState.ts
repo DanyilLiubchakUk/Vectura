@@ -36,7 +36,7 @@ interface BuyOrderData {
     toSell: number;
     price: number;
     buyAtId: string;
-    Xg?: number;
+    orderGapPct?: number;
 }
 
 export async function updateStore(time: string) {
@@ -150,14 +150,14 @@ export async function getAutoTradeActionNeeded(
     };
 }
 export async function addAutoTradeBuyOrder(
-    Xb: number,
-    Xs: number,
-    Xc: number,
-    Xl: number,
+    buyBelowPct: number,
+    sellAbovePct: number,
+    capitalPct: number,
+    cashFloor: number,
     timestamp: string,
     price: number,
     buyAtId: string,
-    Xg?: number
+    orderGapPct?: number
 ): Promise<{ price: number; shares: number } | null> {
     // Check trading allowed first
     if (!(await isTradingAllowed(timestamp, "buy"))) {
@@ -166,17 +166,17 @@ export async function addAutoTradeBuyOrder(
 
     const state = autoTradeStorage.getState();
     let cash = state.capital?.cash ?? 0;
-    let useCash = roundDown(cash * (Xc / 100));
+    let useCash = roundDown(cash * (capitalPct / 100));
 
-    // If executing a buy trade will reduce cash below Xl
-    if (cash - useCash < Xl) {
+    // If executing a buy trade will reduce cash below cashFloor
+    if (cash - useCash < cashFloor) {
         return null;
     }
 
     const shares = roundDown(useCash / price);
     useCash = shares * price;
-    const toBuy = price * (1 - Xb / 100);
-    const toSell = price * (1 + Xs / 100);
+    const toBuy = price * (1 - buyBelowPct / 100);
+    const toSell = price * (1 + sellAbovePct / 100);
     cash -= useCash;
 
     const orderData: BuyOrderData = {
@@ -187,7 +187,7 @@ export async function addAutoTradeBuyOrder(
         toSell,
         price,
         buyAtId,
-        Xg,
+        orderGapPct,
     };
 
     const result = await executeBuyOrder(orderData);
@@ -195,14 +195,14 @@ export async function addAutoTradeBuyOrder(
     return result;
 }
 export async function addAutoTradeSellOrder(
-    Xb: number,
-    Xu: number,
+    buyBelowPct: number,
+    buyAfterSellPct: number,
     timestamp: string,
     price: number,
     sellActionId: string,
     tradeId: string,
     shares: number,
-    Xg: number
+    orderGapPct: number
 ): Promise<{ price: number; shares: number } | null> {
     // Check trading allowed first
     if (!(await isTradingAllowed(timestamp, "sell", tradeId))) {
@@ -214,8 +214,8 @@ export async function addAutoTradeSellOrder(
     const proceeds = price * shares;
     cash += proceeds;
 
-    const downPrice = price * (1 - Xb / 100);
-    const upPrice = price * (1 + Xu / 100);
+    const downPrice = price * (1 - buyBelowPct / 100);
+    const upPrice = price * (1 + buyAfterSellPct / 100);
 
     const result = await executeSellOrder(
         generateOrderId(timestamp),
@@ -225,7 +225,7 @@ export async function addAutoTradeSellOrder(
         [downPrice, upPrice],
         sellActionId,
         tradeId,
-        Xg
+        orderGapPct
     );
     setCapital(cash);
     return result;
@@ -299,7 +299,7 @@ async function executeBuyOrder(
     );
     const filteredToBuy = filterToBuyActions(
         [...currentToBuy, followUpBuyAction],
-        orderData.Xg
+        orderData.orderGapPct
     );
 
     // Save to database
@@ -347,7 +347,7 @@ async function executeSellOrder(
     toBuy: [number, number],
     sellActionId: string,
     tradeId: string,
-    Xg?: number
+    orderGapPct?: number
 ): Promise<{ price: number; shares: number }> {
     const orderResult = await placeOrder(TRADE_SYMBOL, shares, EtradeSide.Sell);
 
@@ -397,7 +397,7 @@ async function executeSellOrder(
     // Get current toBuy actions and filter
     const filteredToBuy = filterToBuyActions(
         [...state.actions.toBuy, buyBelowAction, buyAboveAction],
-        Xg
+        orderGapPct
     );
 
     // Save to database

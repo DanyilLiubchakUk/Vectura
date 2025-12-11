@@ -38,51 +38,59 @@ export async function getActionNeededOrders(
 }
 export async function addBuyOrder(
     backtesting: boolean,
-    Xb: number,
-    Xs: number,
-    Xc: number,
-    Xl: number,
+    buyBelowPct: number,
+    sellAbovePct: number,
+    capitalPct: number,
+    cashFloor: number,
     time: string,
     currentPrice: number,
     buyAtId: string,
-    Xg: number
+    orderGapPct: number
 ): Promise<{
     price: number;
     shares: number;
 } | null | void> {
     if (backtesting) {
-        return addBacktestBuyOrder(Xb, Xs, Xc, Xl, time, currentPrice, buyAtId);
+        return addBacktestBuyOrder(
+            buyBelowPct,
+            sellAbovePct,
+            capitalPct,
+            cashFloor,
+            time,
+            currentPrice,
+            buyAtId
+        );
     } else {
         return await addAutoTradeBuyOrder(
-            Xb,
-            Xs,
-            Xc,
-            Xl,
+            buyBelowPct,
+            sellAbovePct,
+            capitalPct,
+            cashFloor,
             time,
             currentPrice,
             buyAtId,
-            Xg
+            orderGapPct
         );
     }
 }
 export async function addSellOrder(
     backtesting: boolean,
-    Xb: number,
-    Xu: number,
+    buyBelowPct: number,
+    buyAfterSellPct: number,
     time: string,
     currentPrice: number,
     sellActionId: string,
     tradeId: string,
     shares: number,
-    Xg: number
+    orderGapPct: number
 ): Promise<{
     price: number;
     shares: number;
 } | null | void> {
     if (backtesting) {
         return addBacktestSellOrder(
-            Xb,
-            Xu,
+            buyBelowPct,
+            buyAfterSellPct,
             time,
             currentPrice,
             sellActionId,
@@ -91,14 +99,14 @@ export async function addSellOrder(
         );
     } else {
         return await addAutoTradeSellOrder(
-            Xb,
-            Xu,
+            buyBelowPct,
+            buyAfterSellPct,
             time,
             currentPrice,
             sellActionId,
             tradeId,
             shares,
-            Xg
+            orderGapPct
         );
     }
 }
