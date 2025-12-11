@@ -8,6 +8,7 @@ import {
 import { fetchDayBarsFromAlpaca } from "@/utils/alpaca/backtestFetcher";
 import { flushBucketToSupabase } from "@/utils/supabase/backtestStorage";
 import {
+    BINARY_SEARCH_MAX_ITERATIONS,
     DAYS_BEFORE_TODAY,
     MINUTE_BAR_BATCH_SIZE,
     TIME_BETWEEN_BATCHES,
@@ -168,10 +169,9 @@ export async function findFirstAvailableDay(
     let earliestFound: string | null = null;
 
     // Binary search
-    const maxIterations = 20;
     let iterations = 0;
 
-    while (left <= right && iterations < maxIterations) {
+    while (left <= right && iterations < BINARY_SEARCH_MAX_ITERATIONS) {
         iterations++;
 
         const midTime = (left.getTime() + right.getTime()) / 2;

@@ -2,6 +2,7 @@ export const MINUTE_BAR_BATCH_SIZE = Number(
     process.env.MINUTE_BAR_BATCH_SIZE ?? 10
 );
 export const DAYS_BEFORE_TODAY = Number(process.env.DAYS_BEFORE_TODAY ?? 10);
+export const BINARY_SEARCH_MAX_ITERATIONS = 16
 
 // TIME_BETWEEN_BATCHES controls how many milliseconds we wait between API batches to avoid rate limiting.
 // If your computer is very fast (high computation power), you should use a higher value (up to 300ms) because it processes batches quickly and could hit the rate limit if requests are sent too rapidly.
