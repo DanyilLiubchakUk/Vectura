@@ -47,6 +47,10 @@ export default defineConfig({
                         name: "APCA_API_SECRET_KEY",
                         value: process.env.APCA_API_SECRET_KEY!,
                     },
+                    {
+                        name: "ALPHA_VANTAGE_API_KEY",
+                        value: process.env.ALPHA_VANTAGE_API_KEY!,
+                    },
                 ];
             }),
         ],
