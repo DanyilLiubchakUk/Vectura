@@ -196,7 +196,7 @@ export async function addAutoTradeBuyOrder(
 }
 export async function addAutoTradeSellOrder(
     Xb: number,
-    Xs: number,
+    Xu: number,
     timestamp: string,
     price: number,
     sellActionId: string,
@@ -215,7 +215,7 @@ export async function addAutoTradeSellOrder(
     cash += proceeds;
 
     const downPrice = price * (1 - Xb / 100);
-    const upPrice = price * (1 + Xs / 100);
+    const upPrice = price * (1 + Xu / 100);
 
     const result = await executeSellOrder(
         generateOrderId(timestamp),

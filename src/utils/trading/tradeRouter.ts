@@ -68,7 +68,7 @@ export async function addBuyOrder(
 export async function addSellOrder(
     backtesting: boolean,
     Xb: number,
-    Xs: number,
+    Xu: number,
     time: string,
     currentPrice: number,
     sellActionId: string,
@@ -82,7 +82,7 @@ export async function addSellOrder(
     if (backtesting) {
         return addBacktestSellOrder(
             Xb,
-            Xs,
+            Xu,
             time,
             currentPrice,
             sellActionId,
@@ -92,7 +92,7 @@ export async function addSellOrder(
     } else {
         return await addAutoTradeSellOrder(
             Xb,
-            Xs,
+            Xu,
             time,
             currentPrice,
             sellActionId,

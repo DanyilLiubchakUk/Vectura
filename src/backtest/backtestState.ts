@@ -143,7 +143,7 @@ export function addBuyOrder(
 
 export function addSellOrder(
     Xb: number,
-    Xs: number,
+    Xu: number,
     timestamp: string,
     price: number,
     sellActionId: string,
@@ -160,7 +160,7 @@ export function addSellOrder(
     cash += proceeds;
 
     const downPrice = price * (1 - Xb / 100);
-    const upPrice = price * (1 + Xs / 100);
+    const upPrice = price * (1 + Xu / 100);
 
     executeSellOrder(
         generateOrderId(),

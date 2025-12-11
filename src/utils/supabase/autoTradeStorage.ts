@@ -128,12 +128,13 @@ export async function getAlgoConfigOrDefault(): Promise<{
     Xc: number;
     Xb: number;
     Xs: number;
+    Xu: number;
     Xl: number;
     Xg: number;
 }> {
     const { data, error } = await supabase
         .from("at_algo_config")
-        .select("xc, xb, xs, xl, xg")
+        .select("xc, xb, xs, xu, xl, xg")
         .eq("symbol", TRADE_SYMBOL)
         .eq("algorithm", TRADING_ALGORITHM)
         .maybeSingle();
@@ -150,6 +151,7 @@ export async function getAlgoConfigOrDefault(): Promise<{
             xc: GRID_TRADE_V0_DEFAULT_CONFIG.Xc,
             xb: GRID_TRADE_V0_DEFAULT_CONFIG.Xb,
             xs: GRID_TRADE_V0_DEFAULT_CONFIG.Xs,
+            xu: GRID_TRADE_V0_DEFAULT_CONFIG.Xu,
             xl: GRID_TRADE_V0_DEFAULT_CONFIG.Xl,
             xg: GRID_TRADE_V0_DEFAULT_CONFIG.Xg,
         });
@@ -168,6 +170,7 @@ export async function getAlgoConfigOrDefault(): Promise<{
         Xc: Number(data.xc ?? GRID_TRADE_V0_DEFAULT_CONFIG.Xc),
         Xb: Number(data.xb ?? GRID_TRADE_V0_DEFAULT_CONFIG.Xb),
         Xs: Number(data.xs ?? GRID_TRADE_V0_DEFAULT_CONFIG.Xs),
+        Xu: Number(data.xu ?? GRID_TRADE_V0_DEFAULT_CONFIG.Xu),
         Xl: Number(data.xl ?? GRID_TRADE_V0_DEFAULT_CONFIG.Xl),
         Xg: Number(data.xg ?? GRID_TRADE_V0_DEFAULT_CONFIG.Xg),
     };
