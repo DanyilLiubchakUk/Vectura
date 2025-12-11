@@ -8,6 +8,7 @@ import {
     resetSymbolRangeAfterSplitChange,
 } from "@/utils/supabase/backtestStorage";
 import { findFirstAvailableDay } from "@/backtest/storage/rangeManager";
+import { formatDay } from "@/backtest/storage/dateUtils";
 
 const splitsCache = new Map<string, Split[]>();
 
@@ -139,7 +140,7 @@ export async function checkAndRefreshSplits(
 
     const splitsChanged = !areSplitsEqual(symbolRange.splits, newSplits);
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = formatDay(new Date());
 
     if (splitsChanged) {
         console.log(
