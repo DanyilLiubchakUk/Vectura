@@ -16,7 +16,7 @@ import {
     roundDown,
     generateOrderId,
 } from "@/backtest/utils/helpers";
-import { GRID_TRADE_V0_DEFAULT_CONFIG } from "@/utils/trading/algorithms/gridTradeV0";
+import { GRID_TRADE_V0_DEFAULT_CONFIG } from "@/utils/trading/algorithms/constants";
 
 export function initializeBacktest(
     stock: string,
