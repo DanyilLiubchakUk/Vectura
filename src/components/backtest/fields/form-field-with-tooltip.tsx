@@ -54,7 +54,7 @@ export function FormFieldWithTooltip<T extends FieldValues>({
             </div>
             {children}
             {description && (
-                <FormDescription className="sm:hidden text-xs">
+                <FormDescription className="[[data-slot=form-item]:has([data-slot=slider])_&]:hidden text-xs">
                     {description}
                 </FormDescription>
             )}
