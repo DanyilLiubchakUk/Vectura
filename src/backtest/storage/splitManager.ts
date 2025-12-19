@@ -1,8 +1,8 @@
-import { supabase } from "@/utils/supabase/supabaseClient";
 import { fetchSplitsFromAlphaVantage } from "@/utils/alphavantage/splits";
 import { SymbolRange, SplitInfo, Split } from "@/backtest/types";
 import {
     readSymbolRange,
+    upsertSymbolRange,
     deleteCachedBarsForSymbol,
     updateSplitsInDatabase,
     resetSymbolRangeAfterSplitChange,
@@ -66,34 +66,18 @@ export async function ensureSymbolRangeExists(
         return existing;
     }
 
-    const { data, error } = await supabase
-        .from("symbol_ranges")
-        .insert({
-            symbol,
-            have_from: null,
-            have_to: null,
-            first_available_day: null,
-            splits: [],
-            last_split_check: null,
-        })
-        .select()
-        .single();
+    // Create new range
+    const newRange = await upsertSymbolRange(symbol, null, null, null, null);
 
-    if (error) {
-        console.error("[splitManager] Error creating symbol range", {
-            symbol,
-            error,
-        });
-        throw error;
+    if (!newRange) {
+        throw new Error(`Failed to create symbol range for ${symbol}`);
     }
 
-    const range = data as SymbolRange;
-
-    if (range.splits && range.splits.length > 0) {
-        cacheSplitsFromSymbolRange(symbol, range.splits);
+    if (newRange.splits && newRange.splits.length > 0) {
+        cacheSplitsFromSymbolRange(symbol, newRange.splits);
     }
 
-    return range;
+    return newRange;
 }
 
 export async function checkAndRefreshSplits(
