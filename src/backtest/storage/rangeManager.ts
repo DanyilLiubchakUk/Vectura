@@ -227,7 +227,7 @@ export function validateDateRange(
         );
     }
 
-    if (endDate >= todayMinusDaysBeforeToday) {
+    if (endDate > todayMinusDaysBeforeToday) {
         throw new Error(
             `End date ${endDate} must be before ${todayMinusDaysBeforeToday} (today - ${DAYS_BEFORE_TODAY} days)`
         );
@@ -251,7 +251,7 @@ export async function fillMissingRanges(
 
     if (leftRange) {
         console.log(
-            `Startng filling start range ${symbol} from ${leftRange.start} to ${leftRange.end}`
+            `Starting filling start range ${symbol} from ${leftRange.start} to ${leftRange.end}`
         );
         currentRange = await fillRange(
             symbol,
@@ -265,7 +265,7 @@ export async function fillMissingRanges(
 
     if (rightRange) {
         console.log(
-            `Startng filling end range ${symbol} from ${rightRange.start} to ${rightRange.end}`
+            `Starting filling end range ${symbol} from ${rightRange.start} to ${rightRange.end}`
         );
         currentRange = await fillRange(
             symbol,
