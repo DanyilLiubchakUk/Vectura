@@ -1,10 +1,9 @@
-import { DEFAULT_SERVERLESS_DURATION_SECS } from "@/constants/runtime";
 import { runBacktestCore } from "@/backtest/core/engine";
 import { NextRequest } from "next/server";
 import type { BacktestConfig, BacktestProgressEvent } from "@/backtest/types";
 
 export const runtime = "nodejs";
-export const maxDuration = DEFAULT_SERVERLESS_DURATION_SECS;
+export const maxDuration = 1800; // 30 minutes (60 * 30 seconds)
 
 export async function POST(request: NextRequest) {
     try {
