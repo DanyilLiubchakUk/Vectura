@@ -16,6 +16,44 @@ Vectura is an open-source project to build a fully automated stock trading syste
 -   **State management (Zustand)**: In-memory state management for backtesting and web.
 -   **Broker (Alpaca)**: Trading API for orders and market data.
 
+## Backtesting
+
+Vectura includes a comprehensive backtesting system with two execution modes:
+
+### Local Mode (Serverless)
+
+-   Runs on Vercel serverless functions via Server-Sent Events (SSE)
+-   Streams progress updates in real-time
+-   Suitable for quick backtests and development
+-   Uses Vercel free tier (100GB-hours/month)
+
+### Cloud Mode (AWS Lambda)
+
+-   Runs on AWS Lambda via WebSocket API Gateway
+-   Handles long-running backtests (up to 15 minutes)
+-   Real-time progress streaming
+-   Free tier eligible (1M requests/month, 400K GB-seconds/month)
+
+### Quick AWS Setup
+
+For detailed AWS Lambda setup instructions, see [docs/aws-lambda-backtest-setup.md](docs/aws-lambda-backtest-setup.md).
+
+**Quick steps:**
+
+1. Create IAM role with Lambda execution and API Gateway permissions
+2. Create Lambda function (`backtest-handler`) with Node.js 20.x runtime
+3. Create API Gateway WebSocket API with routes: `$connect`, `$disconnect`, `$default`
+4. Set environment variables in Lambda (Supabase, Alpaca, AlphaVantage keys)
+5. Set `NEXT_PUBLIC_WS_URL` in your `.env.local` to the WebSocket URL
+6. Build and deploy: `npm run deploy:lambda`
+7. Upload `backtest-lambda.zip` to Lambda
+
+**Environment Variables for Cloud Mode:**
+
+```env
+NEXT_PUBLIC_WS_URL=wss://YOUR_API_ID.execute-api.us-east-1.amazonaws.com/prod
+```
+
 ## Planned capabilities
 
 -   **Dashboard UI**: Build out the Next.js frontend to display:
@@ -24,7 +62,6 @@ Vectura is an open-source project to build a fully automated stock trading syste
     -   Real-time performance metrics
     -   Algorithm configuration interface
     -   Backtest results visualization
--   **Cloud backtesting**: AWS-based distributed backtesting for large-scale historical analysis
 
 ## Getting started
 
@@ -53,6 +90,28 @@ Vectura is an open-source project to build a fully automated stock trading syste
 4. Run the development server: `npm run dev`
 
 5. Deploy Trigger.dev workflows: `npx trigger.dev@latest deploy` (select to update versions if prompted)
+
+### Running Backtests
+
+**Via Web UI:**
+
+1. Navigate to `/backtest` page
+2. Select execution mode: **Local** (Vercel serverless) or **Cloud** (AWS Lambda)
+3. Fill in backtest parameters (stock, algorithm, date range, capital)
+4. Click "Run Backtest" and watch real-time progress
+
+**Via CLI:**
+
+```bash
+npm run backtest
+# Follow prompts or provide arguments(optional):
+# npm run backtest TQQQ GridV0 2024-01-01 2024-12-31 1000 7 500
+```
+
+**Cloud Mode Setup:**
+
+-   Requires AWS Lambda and API Gateway setup (see [AWS Setup Guide](docs/aws-lambda-backtest-setup.md))
+-   Set `NEXT_PUBLIC_WS_URL` in `.env.local` to your WebSocket API endpoint
 
 ### Database setup
 

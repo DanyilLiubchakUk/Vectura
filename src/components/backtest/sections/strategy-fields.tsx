@@ -1,4 +1,8 @@
 import { SliderField } from "@/components/backtest/fields/slider-field";
+import { useFormContainer } from "@/contexts/form-container-context";
+import { MEDIA_QUERY_BREAKPOINTS } from "@/constants/media-queries";
+import { useElementSize } from "@/hooks/use-element-size";
+import { cn } from "@/lib/utils";
 import type { BacktestFormValues } from "@/components/backtest/schema";
 import type { Control } from "react-hook-form";
 
@@ -7,6 +11,15 @@ interface StrategyFieldsProps {
 }
 
 export function StrategyFields({ control }: StrategyFieldsProps) {
+    const containerRef = useFormContainer();
+
+    const colSpanClasses = useElementSize(containerRef || { current: null }, [
+        {
+            operator: ">=",
+            size: MEDIA_QUERY_BREAKPOINTS.MD,
+            classes: "col-span-6",
+        },
+    ]);
     return (
         <>
             {/* Capital Percentage */}
@@ -18,7 +31,7 @@ export function StrategyFields({ control }: StrategyFieldsProps) {
                 min={0.1}
                 max={100}
                 step={0.1}
-                className="lg:col-span-2 max-sm:col-span-2"
+                className={cn("col-span-12", colSpanClasses)}
             />
 
             {/* Buy Below Percentage */}
@@ -30,7 +43,7 @@ export function StrategyFields({ control }: StrategyFieldsProps) {
                 min={0.1}
                 max={100}
                 step={0.1}
-                className="lg:col-span-2 max-sm:col-span-2"
+                className={cn("col-span-12", colSpanClasses)}
             />
 
             {/* Sell Above Percentage */}
@@ -42,7 +55,7 @@ export function StrategyFields({ control }: StrategyFieldsProps) {
                 min={0.1}
                 max={100}
                 step={0.1}
-                className="lg:col-span-2 max-sm:col-span-2"
+                className={cn("col-span-12", colSpanClasses)}
             />
 
             {/* Buy After Sell Percentage */}
@@ -54,7 +67,7 @@ export function StrategyFields({ control }: StrategyFieldsProps) {
                 min={0.1}
                 max={100}
                 step={0.1}
-                className="lg:col-span-2 max-sm:col-span-2"
+                className={cn("col-span-12", colSpanClasses)}
             />
 
             {/* Order Gap Percentage */}
@@ -66,7 +79,7 @@ export function StrategyFields({ control }: StrategyFieldsProps) {
                 min={-1}
                 max={100}
                 step={0.1}
-                className="lg:col-span-2 max-sm:col-span-2"
+                className={cn("col-span-12", colSpanClasses)}
             />
         </>
     );

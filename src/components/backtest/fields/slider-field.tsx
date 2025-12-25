@@ -1,7 +1,11 @@
 import { FormFieldWithTooltip } from "@/components/backtest/fields/form-field-with-tooltip";
 import { FormControl, FormField, FormDescription } from "@/components/ui/form";
+import { useFormContainer } from "@/contexts/form-container-context";
+import { MEDIA_QUERY_BREAKPOINTS } from "@/constants/media-queries";
+import { useElementSize } from "@/hooks/use-element-size";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import type { Control, FieldPath, FieldValues } from "react-hook-form";
 
 interface SliderFieldProps<T extends FieldValues> {
@@ -25,6 +29,36 @@ export function SliderField<T extends FieldValues>({
     step = 0.1,
     className,
 }: SliderFieldProps<T>) {
+    const containerRef = useFormContainer();
+    const sliderClasses = useElementSize(containerRef || { current: null }, [
+        {
+            operator: ">=",
+            size: MEDIA_QUERY_BREAKPOINTS.MD,
+            classes: "items-center flex-row",
+        },
+        {
+            operator: ">=",
+            size: MEDIA_QUERY_BREAKPOINTS.LG,
+            classes: "items-start flex-col",
+        },
+    ]);
+
+    const descriptionClasses = useElementSize(
+        containerRef || { current: null },
+        [
+            {
+                operator: ">=",
+                size: MEDIA_QUERY_BREAKPOINTS.MD,
+                classes: "hidden",
+            },
+            {
+                operator: ">=",
+                size: MEDIA_QUERY_BREAKPOINTS.LG,
+                classes: "block",
+            },
+        ]
+    );
+
     return (
         <FormField
             control={control}
@@ -36,7 +70,12 @@ export function SliderField<T extends FieldValues>({
                     className={className}
                     hasError={!!fieldState.error}
                 >
-                    <div className="flex gap-3 md:items-center flex-wrap flex-col md:flex-row">
+                    <div
+                        className={cn(
+                            "flex gap-3 flex-wrap flex-col",
+                            sliderClasses
+                        )}
+                    >
                         <div className="flex gap-3 items-center">
                             <FormControl>
                                 <Input
@@ -52,7 +91,12 @@ export function SliderField<T extends FieldValues>({
                                 />
                             </FormControl>
                             {description && (
-                                <FormDescription className="sm:hidden text-xs">
+                                <FormDescription
+                                    className={cn(
+                                        "text-xs",
+                                        descriptionClasses
+                                    )}
+                                >
                                     {description}
                                 </FormDescription>
                             )}

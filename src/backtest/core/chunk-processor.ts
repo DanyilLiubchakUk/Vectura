@@ -1,0 +1,102 @@
+import { addMonths, isDayBeforeOrEqual } from "@/backtest/storage/dateUtils";
+import { processContributions } from "@/backtest/core/contribution-handler";
+import { loadPersistedDays } from "@/utils/supabase/backtestStorage";
+import { dayBlobsToMinuteBars } from "@/backtest/minuteBarStorage";
+import { runAlgorithm } from "@/backtest/core/algorithm-runner";
+import { CHUNK_MONTHS } from "@/backtest/constants";
+import type { ProgressCallback } from "@/backtest/types";
+
+export interface ProcessChunkResult {
+    processedBars: number;
+    totalBarsProcessed: number;
+    shouldBreak: boolean;
+    lastBarTimestamp: string;
+    nextContributionDate: Date | null;
+}
+
+export async function processChunk(
+    chunkStart: string,
+    stock: string,
+    endDate: string,
+    startDate: string,
+    algorithm: string,
+    desiredStart: string,
+    endBoundaryIso: string,
+    nextContributionDate: Date | null,
+    contributionAmount: number,
+    contributionFrequencyDays: number,
+    startProcessedBars: number,
+    onProgress?: ProgressCallback
+): Promise<ProcessChunkResult> {
+    let chunkEnd = addMonths(chunkStart, CHUNK_MONTHS);
+    if (!isDayBeforeOrEqual(chunkEnd, endDate)) {
+        chunkEnd = endDate;
+    }
+
+    const dayBlobs = await loadPersistedDays(stock, chunkStart, chunkEnd);
+    const minuteBars = dayBlobsToMinuteBars(dayBlobs);
+
+    if (!minuteBars.length) {
+        return {
+            processedBars: startProcessedBars,
+            totalBarsProcessed: 0,
+            shouldBreak: false,
+            lastBarTimestamp: chunkStart,
+            nextContributionDate,
+        };
+    }
+
+    let chunkStartIndex = 0;
+    if (chunkStart === startDate) {
+        const index = minuteBars.findIndex(
+            (bar) => bar.timestamp >= desiredStart
+        );
+        if (index === -1) {
+            return {
+                processedBars: startProcessedBars,
+                totalBarsProcessed: minuteBars.length,
+                shouldBreak: false,
+                lastBarTimestamp:
+                    minuteBars[minuteBars.length - 1]?.timestamp || chunkStart,
+                nextContributionDate,
+            };
+        }
+        chunkStartIndex = index;
+    }
+
+    let shouldBreak = false;
+    let processedBars = startProcessedBars;
+    let currentNextContributionDate = nextContributionDate;
+
+    for (let i = chunkStartIndex; i < minuteBars.length; i++) {
+        const bar = minuteBars[i];
+
+        if (bar.timestamp >= endBoundaryIso) {
+            shouldBreak = true;
+            break;
+        }
+
+        if (currentNextContributionDate) {
+            currentNextContributionDate = processContributions(
+                bar.timestamp,
+                currentNextContributionDate,
+                contributionAmount,
+                contributionFrequencyDays
+            );
+        }
+
+        await runAlgorithm(algorithm, stock, bar, onProgress);
+
+        processedBars += 1;
+    }
+
+    const lastBar = minuteBars[minuteBars.length - 1];
+
+    return {
+        processedBars,
+        totalBarsProcessed: minuteBars.length,
+        shouldBreak,
+        lastBarTimestamp: lastBar.timestamp,
+        nextContributionDate: currentNextContributionDate,
+    };
+}

@@ -5,6 +5,10 @@ import Ealgorighms from "@/utils/trading/algorithms/dictionary";
 
 export const backtestFormSchema = z
     .object({
+        name: z
+            .string()
+            .min(1, "Backtest name is required")
+            .max(50, "Backtest name must be 50 characters or less"),
         executionMode: z.enum(["local", "cloud"]),
         stock: z
             .string()

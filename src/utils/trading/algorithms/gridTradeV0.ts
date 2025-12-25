@@ -4,14 +4,17 @@ import {
     addBuyOrder,
     addSellOrder,
 } from "@/utils/trading/tradeRouter";
-import { getAlgoConfigOrDefault } from "@/utils/supabase/autoTradeStorage";
-import { GRID_TRADE_V0_DEFAULT_CONFIG } from "@/utils/trading/algorithms/constants";
+import {
+    GRID_TRADE_V0_DEFAULT_CONFIG,
+    IgridV0,
+} from "@/utils/trading/algorithms/constants";
 
 export default async function gridTradeV0(
     stock: string,
     backtesting: boolean = false,
     currentPrice: number,
-    time: string
+    time: string,
+    configOverrides?: IgridV0
 ): Promise<string> {
     let summaryMessage =
         "This time waited for changes in the market for a better trade";
@@ -19,8 +22,12 @@ export default async function gridTradeV0(
     await updateEquity(backtesting, currentPrice, time);
 
     const config = backtesting
-        ? GRID_TRADE_V0_DEFAULT_CONFIG
-        : await getAlgoConfigOrDefault();
+        ? { ...GRID_TRADE_V0_DEFAULT_CONFIG, ...configOverrides }
+        : await (
+              await import(
+                  /* webpackIgnore: true */ "@/utils/supabase/autoTradeStorage"
+              )
+          ).getAlgoConfigOrDefault();
 
     const { toBuyOrders, toSellOrders } = await getActionNeededOrders(
         backtesting,

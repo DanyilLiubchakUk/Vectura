@@ -1,8 +1,12 @@
 import { FormFieldWithTooltip } from "@/components/backtest/fields/form-field-with-tooltip";
 import { TextInputField } from "@/components/backtest/fields/text-input-field";
+import { useFormContainer } from "@/contexts/form-container-context";
+import { MEDIA_QUERY_BREAKPOINTS } from "@/constants/media-queries";
 import { FormField, FormControl } from "@/components/ui/form";
+import { useElementSize } from "@/hooks/use-element-size";
 import { Input } from "@/components/ui/input";
 import { useWatch } from "react-hook-form";
+import { cn } from "@/lib/utils";
 import type { BacktestFormValues } from "@/components/backtest/schema";
 import type { Control } from "react-hook-form";
 
@@ -11,6 +15,30 @@ interface CapitalFieldsProps {
 }
 
 export function CapitalFields({ control }: CapitalFieldsProps) {
+    const containerRef = useFormContainer();
+    const gridClasses = useElementSize(containerRef, [
+        {
+            operator: ">=",
+            size: MEDIA_QUERY_BREAKPOINTS.XL,
+            classes: "col-span-3",
+        },
+        {
+            operator: "<",
+            size: MEDIA_QUERY_BREAKPOINTS.XL,
+            classes: "col-span-4",
+        },
+        {
+            operator: "<",
+            size: MEDIA_QUERY_BREAKPOINTS.LG,
+            classes: "col-span-3",
+        },
+        {
+            operator: "<",
+            size: MEDIA_QUERY_BREAKPOINTS.MD,
+            classes: "col-span-6",
+        },
+    ]);
+
     const contributionFrequencyDays = useWatch({
         control,
         name: "contributionFrequencyDays",
@@ -31,6 +59,7 @@ export function CapitalFields({ control }: CapitalFieldsProps) {
                 placeholder="1000"
                 type="number"
                 step="1"
+                className={cn(gridClasses)}
             />
 
             {/* Cash Floor */}
@@ -44,6 +73,7 @@ export function CapitalFields({ control }: CapitalFieldsProps) {
                 step="1"
                 min={0}
                 transformValue={(value) => Number(value)}
+                className={cn(gridClasses)}
             />
 
             {/* Contribution Frequency */}
@@ -55,6 +85,7 @@ export function CapitalFields({ control }: CapitalFieldsProps) {
                         label="Contribution Frequency (Days)"
                         description="How often to add funds (0 to disable)"
                         hasError={!!fieldState.error}
+                        className={cn(gridClasses)}
                     >
                         <FormControl>
                             <Input
@@ -85,6 +116,7 @@ export function CapitalFields({ control }: CapitalFieldsProps) {
                             label="Contribution Amount"
                             description="Amount to contribute each period"
                             hasError={!!fieldState.error}
+                            className={cn(gridClasses)}
                         >
                             <FormControl>
                                 <Input

@@ -5,6 +5,7 @@ import { DAYS_BEFORE_TODAY } from "@/backtest/constants";
 import type { BacktestFormValues } from "@/components/backtest/schema";
 
 export const defaultBacktestFormValues: BacktestFormValues = {
+    name: "My Backtest",
     executionMode: "local",
     stock: "TQQQ",
     algorithm: Ealgorighms.GridV0,

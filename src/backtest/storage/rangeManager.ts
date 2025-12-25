@@ -4,15 +4,21 @@ import {
     nextDay,
     getTodayMinusDays,
     formatDay,
+    calculateDaysBetween,
 } from "@/backtest/storage/dateUtils";
-import { fetchDayBarsFromAlpaca } from "@/utils/alpaca/backtestFetcher";
-import { flushBucketToSupabase } from "@/utils/supabase/backtestStorage";
+import { fetchDayBars } from "@/utils/backtest/execution-adapter";
+import { backtestStorageAdapter } from "@/utils/backtest/execution-adapter";
 import {
     BINARY_SEARCH_MAX_ITERATIONS,
     DAYS_BEFORE_TODAY,
     MINUTE_BAR_BATCH_SIZE,
     TIME_BETWEEN_BATCHES,
 } from "@/backtest/constants";
+import {
+    emitProgressIfNeeded,
+    progressManager,
+} from "@/backtest/core/progressManager";
+import type { ProgressCallback } from "@/backtest/types";
 
 function streamDayCallback(streamDay?: (blob: DayBlob) => void) {
     return (blob: DayBlob) => {
@@ -55,11 +61,18 @@ async function fillRange(
     direction: "forward" | "backward",
     bucket: DayBlob[],
     currentRange: SymbolRange | null,
-    streamDay?: (blob: DayBlob) => void
+    streamDay?: (blob: DayBlob) => void,
+    onProgress?: ProgressCallback,
+    stage:
+        | "downloading_before_range"
+        | "downloading_after_range" = "downloading_after_range"
 ): Promise<SymbolRange | null> {
     let cursor = direction === "forward" ? range.start : range.end;
     const step = direction === "forward" ? nextDay : previousDay;
     const stream = streamDayCallback(streamDay);
+
+    const totalDays = calculateDaysBetween(range.start, range.end, true);
+    let daysDownloaded = 0;
 
     while (
         direction === "forward" ? cursor <= range.end : cursor >= range.start
@@ -69,7 +82,7 @@ async function fillRange(
         );
 
         try {
-            const blob = await fetchDayBarsFromAlpaca(symbol, cursor);
+            const blob = await fetchDayBars(symbol, cursor);
             if (blob) {
                 if (direction === "backward") {
                     bucket.unshift(blob);
@@ -77,14 +90,46 @@ async function fillRange(
                     bucket.push(blob);
                 }
                 stream(blob);
+                daysDownloaded++;
+
+                let daysCompleted: number = 0;
+                let daysLeft: number = 0;
+
+                if (direction === "backward") {
+                    daysCompleted = calculateDaysBetween(
+                        cursor,
+                        range.end,
+                        true
+                    );
+                    daysLeft = calculateDaysBetween(range.start, cursor, true);
+                } else {
+                    daysCompleted = calculateDaysBetween(
+                        range.start,
+                        cursor,
+                        true
+                    );
+                    daysLeft = calculateDaysBetween(cursor, range.end, true);
+                }
+
+                daysCompleted = Math.max(0, daysCompleted);
+                daysLeft = Math.max(0, daysLeft);
+
+                await emitProgressIfNeeded(
+                    onProgress,
+                    stage,
+                    daysCompleted,
+                    totalDays,
+                    `${daysLeft} days remaining`
+                );
             }
 
             if (bucket.length >= MINUTE_BAR_BATCH_SIZE) {
-                currentRange = await flushBucketToSupabase(
-                    symbol,
-                    bucket,
-                    currentRange
-                );
+                currentRange =
+                    await backtestStorageAdapter.flushBucketToSupabase(
+                        symbol,
+                        bucket,
+                        currentRange
+                    );
                 bucket.length = 0;
             }
         } catch (error) {
@@ -99,7 +144,7 @@ async function fillRange(
     }
 
     if (bucket.length) {
-        currentRange = await flushBucketToSupabase(
+        currentRange = await backtestStorageAdapter.flushBucketToSupabase(
             symbol,
             bucket,
             currentRange
@@ -107,12 +152,25 @@ async function fillRange(
         bucket.length = 0;
     }
 
+    // Send 100% completion at the end (current = total to get 100%)
+    await emitProgressIfNeeded(
+        onProgress,
+        stage,
+        totalDays,
+        totalDays,
+        "Download complete"
+    );
+
     return currentRange;
 }
 
 async function checkNineDaysAround(
     symbol: string,
-    candidateDay: string
+    candidateDay: string,
+    onProgress?: (
+        fetchesCompleted: number,
+        totalFetches: number
+    ) => Promise<void>
 ): Promise<string | null> {
     const daysToCheck: string[] = [];
 
@@ -132,18 +190,41 @@ async function checkNineDaysAround(
 
     const sortedDays = [...new Set(daysToCheck)].sort();
     let earliestDayWithBars: string | null = null;
+    let fetchCount = 0;
 
     for (const dayToCheck of sortedDays) {
         try {
-            const blob = await fetchDayBarsFromAlpaca(symbol, dayToCheck);
+            const blob = await fetchDayBars(symbol, dayToCheck);
+            fetchCount++;
+
+            if (onProgress) {
+                try {
+                    await onProgress(fetchCount, sortedDays.length);
+                } catch (error) {
+                    console.error(
+                        `[rangeManager] checkNineDaysAround error calling onProgress:`,
+                        error
+                    );
+                }
+            }
+
             if (blob) {
                 earliestDayWithBars = dayToCheck;
                 break;
             }
         } catch (error) {
-            console.log(
-                `[rangeManager] No bars found for ${symbol} on ${dayToCheck}`
-            );
+            fetchCount++;
+
+            if (onProgress) {
+                try {
+                    await onProgress(fetchCount, sortedDays.length);
+                } catch (progressError) {
+                    console.error(
+                        `[rangeManager] checkNineDaysAround error calling onProgress after fetch error:`,
+                        progressError
+                    );
+                }
+            }
         }
 
         await new Promise((resolve) =>
@@ -155,7 +236,8 @@ async function checkNineDaysAround(
 }
 
 export async function findFirstAvailableDay(
-    symbol: string
+    symbol: string,
+    onProgress?: ProgressCallback
 ): Promise<string | null> {
     console.log(
         `[rangeManager] Starting binary search for first available day of ${symbol}`
@@ -170,6 +252,18 @@ export async function findFirstAvailableDay(
 
     // Binary search
     let iterations = 0;
+    const totalFetches = BINARY_SEARCH_MAX_ITERATIONS * 9;
+    let completedFetches = 0;
+
+    // Send initial progress immediately
+    progressManager.reset(); // Reset for new stage
+    await emitProgressIfNeeded(
+        onProgress,
+        "searching_first_available_day",
+        0,
+        totalFetches,
+        `Starting search for first available day`
+    );
 
     while (left <= right && iterations < BINARY_SEARCH_MAX_ITERATIONS) {
         iterations++;
@@ -178,28 +272,63 @@ export async function findFirstAvailableDay(
         const midDate = new Date(midTime);
         const candidateDay = formatDay(midDate);
 
+        const progressCallback = async (
+            fetchesCompleted: number,
+            totalInIteration: number
+        ) => {
+            completedFetches = (iterations - 1) * 9 + fetchesCompleted;
+
+            await emitProgressIfNeeded(
+                onProgress,
+                "searching_first_available_day",
+                completedFetches,
+                totalFetches,
+                `${totalFetches - completedFetches} fetches remaining`
+            );
+        };
+
         const earliestDayWithBars = await checkNineDaysAround(
             symbol,
-            candidateDay
+            candidateDay,
+            progressCallback
+        );
+
+        // Final progress update for this iteration
+        completedFetches = iterations * 9;
+        await emitProgressIfNeeded(
+            onProgress,
+            "searching_first_available_day",
+            completedFetches,
+            totalFetches,
+            `${totalFetches - completedFetches} fetches remaining`
         );
 
         if (earliestDayWithBars) {
             // Found bars, record it and search left (earlier)
             earliestFound = earliestDayWithBars;
             right = new Date(previousDay(earliestDayWithBars));
-            console.log(
-                `[rangeManager] Found bars at ${earliestDayWithBars}, searching earlier`
-            );
+            // console.log(
+            //     `[rangeManager] Found bars at ${earliestDayWithBars}, searching earlier`
+            // );
         } else {
             // No bars found, search right (newer)
             left = new Date(nextDay(candidateDay));
-            console.log(`[rangeManager] No bars found, searching newer dates`);
+            // console.log(`[rangeManager] No bars found, searching newer dates`);
         }
 
         if (right < new Date(startDate)) {
             break;
         }
     }
+
+    // Send 100% completion at the end (current = total to get 100%)
+    await emitProgressIfNeeded(
+        onProgress,
+        "searching_first_available_day",
+        totalFetches,
+        totalFetches,
+        earliestFound ? "Search complete" : "Search finished"
+    );
 
     if (earliestFound) {
         console.log(
@@ -245,7 +374,8 @@ export async function fillMissingRanges(
     leftRange: MissingRange | undefined,
     rightRange: MissingRange | undefined,
     currentRange: SymbolRange | null,
-    streamDay?: (blob: DayBlob) => void
+    streamDay?: (blob: DayBlob) => void,
+    onProgress?: ProgressCallback
 ): Promise<SymbolRange | null> {
     const bucket: DayBlob[] = [];
 
@@ -259,7 +389,9 @@ export async function fillMissingRanges(
             "backward",
             bucket,
             currentRange,
-            streamDay
+            streamDay,
+            onProgress,
+            "downloading_before_range"
         );
     }
 
@@ -273,7 +405,9 @@ export async function fillMissingRanges(
             "forward",
             bucket,
             currentRange,
-            streamDay
+            streamDay,
+            onProgress,
+            "downloading_after_range"
         );
     }
 

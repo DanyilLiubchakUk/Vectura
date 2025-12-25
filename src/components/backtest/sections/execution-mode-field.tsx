@@ -5,9 +5,13 @@ import {
 } from "@/components/ui/tooltip";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { executionModeOptions } from "@/components/backtest/defaults";
+import { useFormContainer } from "@/contexts/form-container-context";
+import { MEDIA_QUERY_BREAKPOINTS } from "@/constants/media-queries";
 import { FormField, FormDescription } from "@/components/ui/form";
+import { useElementSize } from "@/hooks/use-element-size";
 import { Cloud, ServerOff } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import type { BacktestFormValues } from "@/components/backtest/schema";
 import type { Control } from "react-hook-form";
 
@@ -18,12 +22,47 @@ interface ExecutionModeFieldProps {
 const iconMap = [ServerOff, Cloud] as const;
 
 export function ExecutionModeField({ control }: ExecutionModeFieldProps) {
+    const containerRef = useFormContainer();
+    const colSpanClasses = useElementSize(containerRef, [
+        {
+            operator: ">=",
+            size: MEDIA_QUERY_BREAKPOINTS.MD,
+            classes: "col-span-6",
+        },
+    ]);
+
+    const descriptionClasses = useElementSize(containerRef, [
+        {
+            operator: ">=",
+            size: MEDIA_QUERY_BREAKPOINTS.MD,
+            classes: "hidden",
+        },
+        {
+            operator: ">=",
+            size: MEDIA_QUERY_BREAKPOINTS.LG,
+            classes: "block",
+        },
+    ]);
+
+    const tooltipClasses = useElementSize(containerRef, [
+        {
+            operator: "<",
+            size: MEDIA_QUERY_BREAKPOINTS.MD,
+            classes: "hidden",
+        },
+        {
+            operator: ">=",
+            size: MEDIA_QUERY_BREAKPOINTS.LG,
+            classes: "hidden",
+        },
+    ]);
+
     return (
         <FormField
             control={control}
             name="executionMode"
             render={({ field, fieldState }) => (
-                <div className="self-center lg:col-span-2 max-sm:col-span-2">
+                <div className={cn("self-center col-span-12", colSpanClasses)}>
                     <RadioGroup
                         className="flex gap-3"
                         value={field.value}
@@ -51,12 +90,17 @@ export function ExecutionModeField({ control }: ExecutionModeFieldProps) {
                                                     aria-label={opt.value}
                                                 />
                                             </div>
-                                            <FormDescription className="sm:hidden text-xs">
+                                            <FormDescription
+                                                className={cn(
+                                                    "text-xs",
+                                                    descriptionClasses
+                                                )}
+                                            >
                                                 {opt.description}
                                             </FormDescription>
                                         </Label>
                                     </TooltipTrigger>
-                                    <TooltipContent className="max-sm:hidden">
+                                    <TooltipContent className={tooltipClasses}>
                                         <p>{opt.description}</p>
                                     </TooltipContent>
                                 </Tooltip>

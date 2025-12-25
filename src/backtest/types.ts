@@ -36,3 +36,64 @@ export interface Split {
     date: Date;
     ratio: number;
 }
+
+export type BacktestProgressStage =
+    | "initialize_backtest"
+    | "searching_first_available_day"
+    | "downloading_before_range"
+    | "downloading_after_range"
+    | "working_on_chunk"
+    | "completed";
+
+export interface BacktestProgressEvent {
+    stage: BacktestProgressStage;
+    message: string;
+    data?: {
+        stock?: string;
+        startDate?: string;
+        endDate?: string;
+        chunkStart?: string;
+        chunkEnd?: string;
+        processedBars?: number;
+        totalBars?: number;
+        currentBar?: number;
+        progress?: number; // 0-100
+        [key: string]: any;
+    };
+    timestamp: string;
+}
+
+export interface BacktestResult {
+    stock: string;
+    startDate: string;
+    endDate: string;
+    startCapital: number;
+    finalEquity: number;
+    totalReturn: number;
+    totalReturnPercent: number;
+    processedBars: number;
+    executionTime: string; // formatted HH:MM:SS
+    [key: string]: any;
+}
+
+export interface BacktestConfig {
+    executionMode: "local" | "cloud";
+    stock: string;
+    algorithm: string;
+    startDate: string;
+    endDate: string;
+    startCapital: number;
+    contributionFrequencyDays?: number;
+    contributionAmount?: number;
+    backtestTime?: string;
+    capitalPct: number;
+    buyBelowPct: number;
+    sellAbovePct: number;
+    buyAfterSellPct: number;
+    cashFloor: number;
+    orderGapPct: number;
+}
+
+export type ProgressCallback = (
+    event: BacktestProgressEvent
+) => void | Promise<void>;

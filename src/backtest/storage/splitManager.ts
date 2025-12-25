@@ -1,14 +1,11 @@
-import { fetchSplitsFromAlphaVantage } from "@/utils/alphavantage/splits";
-import { SymbolRange, SplitInfo, Split } from "@/backtest/types";
 import {
-    readSymbolRange,
-    upsertSymbolRange,
-    deleteCachedBarsForSymbol,
-    updateSplitsInDatabase,
-    resetSymbolRangeAfterSplitChange,
-} from "@/utils/supabase/backtestStorage";
+    fetchSplits,
+    backtestStorageAdapter,
+} from "@/utils/backtest/execution-adapter";
 import { findFirstAvailableDay } from "@/backtest/storage/rangeManager";
+import { SymbolRange, SplitInfo, Split } from "@/backtest/types";
 import { formatDay } from "@/backtest/storage/dateUtils";
+import type { ProgressCallback } from "@/backtest/types";
 
 const splitsCache = new Map<string, Split[]>();
 
@@ -57,7 +54,7 @@ function areSplitsEqual(splits1: SplitInfo[], splits2: SplitInfo[]): boolean {
 export async function ensureSymbolRangeExists(
     symbol: string
 ): Promise<SymbolRange> {
-    const existing = await readSymbolRange(symbol);
+    const existing = await backtestStorageAdapter.readSymbolRange(symbol);
 
     if (existing) {
         if (existing.splits && existing.splits.length > 0) {
@@ -67,7 +64,13 @@ export async function ensureSymbolRangeExists(
     }
 
     // Create new range
-    const newRange = await upsertSymbolRange(symbol, null, null, null, null);
+    const newRange = await backtestStorageAdapter.upsertSymbolRange(
+        symbol,
+        null,
+        null,
+        null,
+        null
+    );
 
     if (!newRange) {
         throw new Error(`Failed to create symbol range for ${symbol}`);
@@ -81,7 +84,8 @@ export async function ensureSymbolRangeExists(
 }
 
 export async function checkAndRefreshSplits(
-    symbol: string
+    symbol: string,
+    onProgress?: ProgressCallback
 ): Promise<SymbolRange> {
     let symbolRange = await ensureSymbolRangeExists(symbol);
 
@@ -91,7 +95,7 @@ export async function checkAndRefreshSplits(
 
     console.log(`[splitManager] Checking splits for ${symbol}`);
 
-    const newSplits = await fetchSplitsFromAlphaVantage(symbol);
+    const newSplits = await fetchSplits(symbol);
 
     if (newSplits === null) {
         const today = new Date(
@@ -103,7 +107,11 @@ export async function checkAndRefreshSplits(
         )
             .toISOString()
             .split("T")[0];
-        await updateSplitsInDatabase(symbol, symbolRange.splits, today);
+        await backtestStorageAdapter.updateSplitsInDatabase(
+            symbol,
+            symbolRange.splits,
+            today
+        );
         return symbolRange;
     }
 
@@ -113,14 +121,6 @@ export async function checkAndRefreshSplits(
             .map((s) => `${s.effective_date} (${s.split_factor}x)`)
             .join(", ")
     );
-
-    const storedSplitsStr =
-        symbolRange.splits && symbolRange.splits.length > 0
-            ? symbolRange.splits
-                  .map((s) => `${s.effective_date} (${s.split_factor}x)`)
-                  .join(", ")
-            : "none";
-    console.log(`[splitManager] Stored splits: ${storedSplitsStr}`);
 
     const splitsChanged = !areSplitsEqual(symbolRange.splits, newSplits);
 
@@ -133,11 +133,14 @@ export async function checkAndRefreshSplits(
 
         clearSplitsForSymbol(symbol);
 
-        await deleteCachedBarsForSymbol(symbol);
+        await backtestStorageAdapter.deleteCachedBarsForSymbol(symbol);
 
-        const firstAvailableDay = await findFirstAvailableDay(symbol);
+        const firstAvailableDay = await findFirstAvailableDay(
+            symbol,
+            onProgress
+        );
 
-        await resetSymbolRangeAfterSplitChange(
+        await backtestStorageAdapter.resetSymbolRangeAfterSplitChange(
             symbol,
             newSplits,
             today,
@@ -155,7 +158,11 @@ export async function checkAndRefreshSplits(
             first_available_day: firstAvailableDay,
         };
     } else {
-        await updateSplitsInDatabase(symbol, symbolRange.splits, today);
+        await backtestStorageAdapter.updateSplitsInDatabase(
+            symbol,
+            symbolRange.splits,
+            today
+        );
 
         if (symbolRange.splits.length > 0) {
             cacheSplitsFromSymbolRange(symbol, symbolRange.splits);
