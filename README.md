@@ -20,12 +20,13 @@ Vectura is an open-source project to build a fully automated stock trading syste
 
 Vectura includes a comprehensive backtesting system with two execution modes:
 
-### Local Mode (Serverless)
+### Local Mode
 
--   Runs on Vercel serverless functions via Server-Sent Events (SSE)
+-   Runs on your local machine via Server-Sent Events (SSE)
 -   Streams progress updates in real-time
 -   Suitable for quick backtests and development
--   Uses Vercel free tier (100GB-hours/month)
+-   No cloud costs - uses your local resources
+-   Supports running multiple backtests in parallel
 
 ### Cloud Mode (AWS Lambda)
 
@@ -33,6 +34,7 @@ Vectura includes a comprehensive backtesting system with two execution modes:
 -   Handles long-running backtests (up to 15 minutes)
 -   Real-time progress streaming
 -   Free tier eligible (1M requests/month, 400K GB-seconds/month)
+-   Supports running multiple backtests in parallel
 
 ### Quick AWS Setup
 
@@ -96,9 +98,10 @@ NEXT_PUBLIC_WS_URL=wss://YOUR_API_ID.execute-api.us-east-1.amazonaws.com/prod
 **Via Web UI:**
 
 1. Navigate to `/backtest` page
-2. Select execution mode: **Local** (Vercel serverless) or **Cloud** (AWS Lambda)
+2. Select execution mode: **Local** (runs on your machine) or **Cloud** (AWS Lambda)
 3. Fill in backtest parameters (stock, algorithm, date range, capital)
 4. Click "Run Backtest" and watch real-time progress
+5. You can run multiple backtests in parallel - each will execute independently in either mode
 
 **Via CLI:**
 
