@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import type { BacktestConfig, BacktestProgressEvent } from "@/backtest/types";
 
 export const runtime = "nodejs";
-export const maxDuration = 1800; // 30 minutes (60 * 30 seconds)
+export const maxDuration = 300; // 5 minutes (maximum for Vercel hobby plan)
 
 export async function POST(request: NextRequest) {
     try {
