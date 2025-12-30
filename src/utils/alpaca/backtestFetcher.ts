@@ -42,12 +42,12 @@ export async function fetchDayBarsFromAlpaca(
     const bars = filterBarsByDayAndWindow(rawBars, day);
 
     if (!bars.length) {
-        console.log(
-            "◻ market closed or no bars for     " + symbol + " at " + day
-        );
+        // console.log(
+        //     "◻ market closed or no bars for     " + symbol + " at " + day
+        // );
         return null;
     }
-    console.log("◼ fetched day bars from Alpaca for " + symbol + " at " + day);
+    // console.log("◼ fetched day bars from Alpaca for " + symbol + " at " + day);
 
     applySplitAdjustments(bars, symbol);
     const compact = compactBars(bars);

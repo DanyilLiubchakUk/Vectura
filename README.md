@@ -93,6 +93,38 @@ NEXT_PUBLIC_WS_URL=wss://YOUR_API_ID.execute-api.us-east-1.amazonaws.com/prod
 
 5. Deploy Trigger.dev workflows: `npx trigger.dev@latest deploy` (select to update versions if prompted)
 
+### Managing Stock Ranges
+
+The `/ranges` page allows you to manage historical stock data ranges stored in the database. Stock ranges are automatically created when you run backtests, and you can manage them through this interface.
+
+**Features:**
+
+-   **View all ranges**: See all stocks with stored historical data, including their date ranges
+-   **Delete ranges**: Remove all stored data for a specific stock symbol
+-   **Adjust range size**: Make ranges bigger or smaller by changing the start and end dates
+-   **Move ranges**: Shift the entire date range to a different time period
+-   **Smart suggestions**: When a selected date is a closed market day, the system suggests the nearest open trading days
+
+**How to use:**
+
+1. Navigate to `/ranges` page
+2. Each stock symbol is displayed as a card showing:
+    - Current stored date range
+    - Interactive slider to adjust the range
+    - Date input fields for precise date selection
+3. Adjust the range using:
+    - **Slider**: Drag the handles to change start/end dates
+    - **Date inputs**: Type or select specific dates
+4. The system validates dates in real-time:
+    - Checks if dates are market trading days
+    - Suggests nearest open days if a closed day is selected
+5. Click "Update Range" to save changes:
+    - Missing data will be automatically downloaded
+    - Progress is shown in real-time
+    - Data outside the new range is automatically deleted
+
+**Note**: Ranges are automatically created when you run backtests. If no ranges exist, run a backtest first to create them.
+
 ### Running Backtests
 
 **Via Web UI:**

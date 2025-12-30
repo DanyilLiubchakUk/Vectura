@@ -18,6 +18,7 @@ import {
     emitProgressIfNeeded,
     progressManager,
 } from "@/backtest/core/progressManager";
+import { OLDEST_DAY } from "@/constants/time";
 import type { ProgressCallback } from "@/backtest/types";
 
 function streamDayCallback(streamDay?: (blob: DayBlob) => void) {
@@ -25,8 +26,8 @@ function streamDayCallback(streamDay?: (blob: DayBlob) => void) {
         if (streamDay) {
             try {
                 streamDay(blob);
-            } catch (error) {
-                console.error("[rangeManager] stream callback error", error);
+            } catch {
+                // Stream callback error - silently fail
             }
         }
     };
@@ -38,6 +39,7 @@ export function computeMissingRanges(
     haveFrom?: string,
     haveTo?: string
 ): { leftRange?: MissingRange; rightRange?: MissingRange } {
+
     const ranges: { leftRange?: MissingRange; rightRange?: MissingRange } = {};
 
     if (haveFrom && reqFrom < haveFrom) {
@@ -51,6 +53,7 @@ export function computeMissingRanges(
     if (!haveFrom && !haveTo) {
         ranges.rightRange = { start: reqFrom, end: reqTo };
     }
+
 
     return ranges;
 }
@@ -132,12 +135,8 @@ async function fillRange(
                     );
                 bucket.length = 0;
             }
-        } catch (error) {
-            console.error("[rangeManager] fillRange fetch error", {
-                symbol,
-                cursor,
-                error,
-            });
+        } catch {
+            // Fetch error - continue to next day
         }
 
         cursor = step(cursor);
@@ -200,11 +199,8 @@ async function checkNineDaysAround(
             if (onProgress) {
                 try {
                     await onProgress(fetchCount, sortedDays.length);
-                } catch (error) {
-                    console.error(
-                        `[rangeManager] checkNineDaysAround error calling onProgress:`,
-                        error
-                    );
+                } catch {
+                    // Error calling onProgress - silently fail
                 }
             }
 
@@ -218,11 +214,8 @@ async function checkNineDaysAround(
             if (onProgress) {
                 try {
                     await onProgress(fetchCount, sortedDays.length);
-                } catch (progressError) {
-                    console.error(
-                        `[rangeManager] checkNineDaysAround error calling onProgress after fetch error:`,
-                        progressError
-                    );
+                } catch {
+                    // Progress callback error - silently fail
                 }
             }
         }
@@ -239,11 +232,8 @@ export async function findFirstAvailableDay(
     symbol: string,
     onProgress?: ProgressCallback
 ): Promise<string | null> {
-    console.log(
-        `[rangeManager] Starting binary search for first available day of ${symbol}`
-    );
 
-    const startDate = "1990-01-01";
+    const startDate = OLDEST_DAY;
     const maxDate = getTodayMinusDays(DAYS_BEFORE_TODAY);
 
     let left = new Date(startDate);
@@ -330,15 +320,6 @@ export async function findFirstAvailableDay(
         earliestFound ? "Search complete" : "Search finished"
     );
 
-    if (earliestFound) {
-        console.log(
-            `[rangeManager] Found first available day for ${symbol}: ${earliestFound}`
-        );
-    } else {
-        console.warn(
-            `[rangeManager] Could not find first available day for ${symbol}`
-        );
-    }
 
     return earliestFound;
 }
@@ -380,9 +361,6 @@ export async function fillMissingRanges(
     const bucket: DayBlob[] = [];
 
     if (leftRange) {
-        console.log(
-            `Starting filling start range ${symbol} from ${leftRange.start} to ${leftRange.end}`
-        );
         currentRange = await fillRange(
             symbol,
             leftRange,
@@ -396,9 +374,6 @@ export async function fillMissingRanges(
     }
 
     if (rightRange) {
-        console.log(
-            `Starting filling end range ${symbol} from ${rightRange.start} to ${rightRange.end}`
-        );
         currentRange = await fillRange(
             symbol,
             rightRange,
