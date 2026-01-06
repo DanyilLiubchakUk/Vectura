@@ -8,12 +8,11 @@ import { useDateValidation } from "@/app/ranges/hooks/dateValidation";
 import { sliderValueToDate } from "@/app/ranges/utils/date-helpers";
 import { useRangeUpdate } from "@/app/ranges/hooks/rangeUpdate";
 import { RangeCard } from "@/app/ranges/components/RangeCard";
+import { AppHeader } from "@/components/layout/app-header";
 import { useRanges } from "@/app/ranges/hooks/rangesData";
 import { Card, CardContent } from "@/components/ui/card";
 import { DAYS_BEFORE_TODAY } from "@/backtest/constants";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { OLDEST_DAY } from "@/constants/time";
-import { Logo } from "@/components/logo";
 import { useCallback } from "react";
 
 export default function RangesPage() {
@@ -294,15 +293,7 @@ export default function RangesPage() {
 
     return (
         <div className="min-h-screen flex flex-col">
-            <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-                <div className="flex h-16 items-center justify-between px-4 md:px-6 lg:px-8">
-                    <div className="flex items-center gap-2">
-                        <Logo className="h-5 w-auto" />
-                        <h1 className="text-lg font-semibold">Ranges</h1>
-                    </div>
-                    <ThemeToggle />
-                </div>
-            </header>
+            <AppHeader title="Range Manager" />
 
             <main className="flex-1 container mx-auto px-4 md:px-6 lg:px-8 py-8">
                 <div className="max-w-6xl mx-auto space-y-6">
