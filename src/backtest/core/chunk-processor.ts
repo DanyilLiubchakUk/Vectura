@@ -2,7 +2,9 @@ import { addMonths, isDayBeforeOrEqual } from "@/backtest/storage/dateUtils";
 import { processContributions } from "@/backtest/core/contribution-handler";
 import { loadPersistedDays } from "@/utils/supabase/backtestStorage";
 import { dayBlobsToMinuteBars } from "@/backtest/minuteBarStorage";
+import { PriceCollector } from "@/backtest/core/price-collector";
 import { runAlgorithm } from "@/backtest/core/algorithm-runner";
+import { OrderTracker } from "@/backtest/core/order-tracker";
 import { CHUNK_MONTHS } from "@/backtest/constants";
 import type { ProgressCallback } from "@/backtest/types";
 
@@ -26,7 +28,9 @@ export async function processChunk(
     contributionAmount: number,
     contributionFrequencyDays: number,
     startProcessedBars: number,
-    onProgress?: ProgressCallback
+    onProgress?: ProgressCallback,
+    orderTracker?: OrderTracker,
+    priceCollector?: PriceCollector
 ): Promise<ProcessChunkResult> {
     let chunkEnd = addMonths(chunkStart, CHUNK_MONTHS);
     if (!isDayBeforeOrEqual(chunkEnd, endDate)) {
@@ -85,7 +89,11 @@ export async function processChunk(
             );
         }
 
-        await runAlgorithm(algorithm, stock, bar, onProgress);
+        if (priceCollector) {
+            priceCollector.collectPrice(bar.timestamp, bar.close);
+        }
+
+        await runAlgorithm(algorithm, stock, bar, onProgress, orderTracker, priceCollector);
 
         processedBars += 1;
     }

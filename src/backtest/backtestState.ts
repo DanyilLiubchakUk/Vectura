@@ -1,20 +1,21 @@
 import {
-    backtestStore,
-    IbacktestSession,
-    IbacktestCapital,
-} from "@/utils/zustand/backtestStore";
-import { isTradingAllowed } from "@/backtest/pdt/pdtManager";
-import { getActionNeededOrders as getActionNeededOrdersInternal } from "@/backtest/orders/orderManager";
-import {
     executeBuyOrder,
     executeSellOrder,
     BuyOrderData,
 } from "@/backtest/trades/tradeManager";
 import {
+    backtestStore,
+    IbacktestSession,
+    IbacktestCapital,
+} from "@/utils/zustand/backtestStore";
+import {
     calculateEquity,
     roundDown,
     generateOrderId,
 } from "@/backtest/utils/helpers";
+import { getActionNeededOrders as getActionNeededOrdersInternal } from "@/backtest/orders/orderManager";
+import { isTradingAllowed } from "@/backtest/pdt/pdtManager";
+import { OrderTracker } from "@/backtest/core/order-tracker";
 import type { BacktestConfig } from "@/backtest/types";
 
 export function initializeBacktest(config: BacktestConfig): void {
@@ -104,7 +105,9 @@ export function addBuyOrder(
     timestamp: string,
     price: number,
     buyAtId: string,
-    orderGapPct: number
+    orderGapPct: number,
+    orderTracker?: OrderTracker,
+    priceCollector?: import("@/backtest/core/price-collector").PriceCollector
 ): void {
     if (!isTradingAllowed(timestamp, "buy")) {
         return;
@@ -135,7 +138,12 @@ export function addBuyOrder(
         orderGapPct,
     };
 
-    executeBuyOrder(orderData);
+    // Force collect price at order execution time
+    if (priceCollector) {
+        priceCollector.forceCollectPrice(timestamp, price);
+    }
+
+    executeBuyOrder(orderData, orderTracker, priceCollector);
     setCapital(cash);
 }
 
@@ -147,7 +155,9 @@ export function addSellOrder(
     sellActionId: string,
     tradeId: string,
     shares: number,
-    orderGapPct: number
+    orderGapPct: number,
+    orderTracker?: OrderTracker,
+    priceCollector?: import("@/backtest/core/price-collector").PriceCollector
 ): void {
     if (!isTradingAllowed(timestamp, "sell", tradeId)) {
         return;
@@ -161,6 +171,11 @@ export function addSellOrder(
     const downPrice = price * (1 - buyBelowPct / 100);
     const upPrice = price * (1 + buyAfterSellPct / 100);
 
+    // Force collect price at order execution time
+    if (priceCollector) {
+        priceCollector.forceCollectPrice(timestamp, price);
+    }
+
     executeSellOrder(
         generateOrderId(),
         shares,
@@ -169,7 +184,9 @@ export function addSellOrder(
         [downPrice, upPrice],
         sellActionId,
         tradeId,
-        orderGapPct
+        orderGapPct,
+        orderTracker,
+        priceCollector
     );
     setCapital(cash);
 }

@@ -1,6 +1,8 @@
 import gridTradeV0 from "@/utils/trading/algorithms/gridTradeV0";
+import { PriceCollector } from "@/backtest/core/price-collector";
 import Ealgorighms from "@/utils/trading/algorithms/dictionary";
 import { backtestStore } from "@/utils/zustand/backtestStore";
+import { OrderTracker } from "@/backtest/core/order-tracker";
 import { emitProgress } from "@/backtest/utils/helpers";
 import {
     GRID_TRADE_V0_DEFAULT_CONFIG,
@@ -15,7 +17,9 @@ export async function runAlgorithm(
         close: number;
         timestamp: string;
     },
-    onProgress?: ProgressCallback
+    onProgress?: ProgressCallback,
+    orderTracker?: OrderTracker,
+    priceCollector?: PriceCollector
 ): Promise<void> {
     switch (algorithm) {
         case Ealgorighms.GridV0:
@@ -41,7 +45,9 @@ export async function runAlgorithm(
                     true,
                     bar.close,
                     bar.timestamp,
-                    gridConfig
+                    gridConfig,
+                    orderTracker,
+                    priceCollector
                 );
             }
             break;

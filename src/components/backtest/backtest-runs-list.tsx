@@ -31,7 +31,7 @@ export function BacktestRunsList({
     }
 
     return (
-        <ScrollArea className="flex-1 h-full">
+        <ScrollArea className="flex-1 h-full [&_>div>div]:block!">
             <div className="space-y-3 px-4 pb-4">
                 {runs.map((run, index) => (
                     <BacktestRunItem

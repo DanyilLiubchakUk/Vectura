@@ -8,13 +8,17 @@ import {
     GRID_TRADE_V0_DEFAULT_CONFIG,
     IgridV0,
 } from "@/utils/trading/algorithms/constants";
+import { PriceCollector } from "@/backtest/core/price-collector";
+import { OrderTracker } from "@/backtest/core/order-tracker";
 
 export default async function gridTradeV0(
     stock: string,
     backtesting: boolean = false,
     currentPrice: number,
     time: string,
-    configOverrides?: IgridV0
+    configOverrides?: IgridV0,
+    orderTracker?: OrderTracker,
+    priceCollector?: PriceCollector
 ): Promise<string> {
     let summaryMessage =
         "This time waited for changes in the market for a better trade";
@@ -24,10 +28,10 @@ export default async function gridTradeV0(
     const config = backtesting
         ? { ...GRID_TRADE_V0_DEFAULT_CONFIG, ...configOverrides }
         : await (
-              await import(
+            await import(
                   /* webpackIgnore: true */ "@/utils/supabase/autoTradeStorage"
-              )
-          ).getAlgoConfigOrDefault();
+            )
+        ).getAlgoConfigOrDefault();
 
     const { toBuyOrders, toSellOrders } = await getActionNeededOrders(
         backtesting,
@@ -45,7 +49,9 @@ export default async function gridTradeV0(
             time,
             currentPrice,
             buyOrder.id,
-            config.orderGapPct
+            config.orderGapPct,
+            orderTracker,
+            priceCollector
         );
 
         if (!backtesting && result) {
@@ -69,7 +75,9 @@ export default async function gridTradeV0(
             sellOrder.id,
             sellOrder.tradeId,
             sellOrder.shares,
-            config.orderGapPct
+            config.orderGapPct,
+            orderTracker,
+            priceCollector
         );
 
         if (!backtesting && result) {

@@ -15,9 +15,11 @@ import {
 import { initializeContribution } from "@/backtest/core/contribution-handler";
 import { calculateBacktestResult } from "@/backtest/core/result-calculator";
 import { setExecutionMode } from "@/utils/backtest/execution-adapter";
+import { PriceCollector } from "@/backtest/core/price-collector";
 import { ensureSymbolRange } from "@/backtest/minuteBarStorage";
 import { processChunk } from "@/backtest/core/chunk-processor";
 import { initializeBacktest } from "@/backtest/backtestState";
+import { OrderTracker } from "@/backtest/core/order-tracker";
 import { emitProgress } from "@/backtest/utils/helpers";
 import { CHUNK_MONTHS } from "@/backtest/constants";
 import type {
@@ -38,6 +40,10 @@ export async function runBacktestCore(
         stage: "initialize_backtest",
         message: `Initializing backtest for ${config.stock}`,
     });
+
+    // Initialize chart data collectors
+    const orderTracker = new OrderTracker();
+    const priceCollector = new PriceCollector(config.startDate, config.endDate);
 
     initializeBacktest(config);
 
@@ -107,7 +113,9 @@ export async function runBacktestCore(
             config.contributionAmount || 0,
             config.contributionFrequencyDays || 0,
             processedBars,
-            onProgress
+            onProgress,
+            orderTracker,
+            priceCollector
         );
 
         processedBars = chunkResult.processedBars;
@@ -168,7 +176,9 @@ export async function runBacktestCore(
     const result = await calculateBacktestResult(
         config,
         processedBars,
-        engineStartTime
+        engineStartTime,
+        orderTracker,
+        priceCollector
     );
 
     await emitProgress(onProgress, {

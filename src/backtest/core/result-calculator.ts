@@ -1,11 +1,15 @@
 import { formatExecutionTime } from "@/backtest/storage/dateUtils";
+import { PriceCollector } from "@/backtest/core/price-collector";
 import { backtestStore } from "@/utils/zustand/backtestStore";
+import { OrderTracker } from "@/backtest/core/order-tracker";
 import type { BacktestConfig, BacktestResult } from "@/backtest/types";
 
 export async function calculateBacktestResult(
     config: BacktestConfig,
     processedBars: number,
-    engineStartTime: Date
+    engineStartTime: Date,
+    orderTracker?: OrderTracker,
+    priceCollector?: PriceCollector
 ): Promise<BacktestResult> {
     const engineEndTime = new Date();
     const diffMs = engineEndTime.getTime() - engineStartTime.getTime();
@@ -17,6 +21,16 @@ export async function calculateBacktestResult(
     const totalReturnPercent =
         config.startCapital > 0 ? (totalReturn / config.startCapital) * 100 : 0;
 
+    // Generate chart data
+    let chartData;
+    if (orderTracker && priceCollector) {
+
+        chartData = {
+            priceData: priceCollector.getPriceData(),
+            executions: orderTracker.generateExecutionLines(),
+        };
+    }
+
     return {
         stock: config.stock,
         startDate: config.startDate,
@@ -27,5 +41,6 @@ export async function calculateBacktestResult(
         totalReturnPercent,
         processedBars,
         executionTime,
+        chartData,
     };
 }

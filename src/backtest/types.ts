@@ -63,6 +63,20 @@ export interface BacktestProgressEvent {
     timestamp: string;
 }
 
+export interface PricePoint {
+    time: string | number;
+    value: number;
+}
+
+export interface ExecutionLine {
+    id: string;
+    type: 'buy' | 'sell';
+    triggerPrice: number;
+    startTime: string;
+    executionTime?: string;
+    executed: boolean;
+}
+
 export interface BacktestResult {
     stock: string;
     startDate: string;
@@ -73,6 +87,10 @@ export interface BacktestResult {
     totalReturnPercent: number;
     processedBars: number;
     executionTime: string; // formatted HH:MM:SS
+    chartData?: {
+        priceData: PricePoint[];
+        executions: ExecutionLine[];
+    };
     [key: string]: any;
 }
 

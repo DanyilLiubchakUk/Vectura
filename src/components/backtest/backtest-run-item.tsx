@@ -158,7 +158,7 @@ export function BacktestRunItem({
 
                     {/* Results */}
                     {isCompleted && run.result && (
-                        <BacktestResults result={run.result} />
+                        <BacktestResults result={run.result} runId={runId} />
                     )}
                 </div>
             </CollapsibleContent>
