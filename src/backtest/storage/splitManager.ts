@@ -89,6 +89,10 @@ export async function checkAndRefreshSplits(
 ): Promise<SymbolRange> {
     let symbolRange = await ensureSymbolRangeExists(symbol);
 
+    if (symbolRange.splits && symbolRange.splits.length > 0) {
+        cacheSplitsFromSymbolRange(symbol, symbolRange.splits);
+    }
+
     if (!shouldCheckSplits(symbolRange.last_split_check)) {
         return symbolRange;
     }
@@ -188,8 +192,11 @@ export function clearSplitsForSymbol(symbol: string): void {
 }
 
 export function splitInfoToSplit(splitInfo: SplitInfo): Split {
+    const splitDate = new Date(splitInfo.effective_date);
+    splitDate.setUTCHours(0, 0, 0, 0);
+
     return {
-        date: new Date(splitInfo.effective_date),
+        date: splitDate,
         ratio: splitInfo.split_factor,
     };
 }
