@@ -7,6 +7,8 @@ export class PriceCollector {
     private sampleInterval: number; // in milliseconds
     private startDate: string;
     private endDate: string;
+    private lastPriceSeen: number | null = null;
+    private lastTimestampSeen: string | null = null;
 
     constructor(startDate: string, endDate: string) {
         this.startDate = startDate;
@@ -46,6 +48,10 @@ export class PriceCollector {
         const timestampMs = new Date(timestamp).getTime();
         const timeKey = timestamp;
 
+        // Track the last price seen (for final price collection)
+        this.lastPriceSeen = price;
+        this.lastTimestampSeen = timestamp;
+
         // Always collect the first price point
         if (this.pricePoints.size === 0) {
             this.pricePoints.set(timeKey, {
@@ -69,14 +75,6 @@ export class PriceCollector {
                 this.lastSampleTime = timestamp;
             }
         }
-
-        // Always update the last point if we're at the end
-        if (timestamp >= this.endDate) {
-            this.pricePoints.set(timeKey, {
-                time: timestamp,
-                value: price,
-            });
-        }
     }
 
     /**
@@ -93,9 +91,28 @@ export class PriceCollector {
     }
 
     /**
+     * Ensure the final price point is collected
+     * This should be called after all bars are processed
+     * Only collects the actual final price if it hasn't been collected yet via sample interval or actions
+     */
+    ensureFinalPrice(): void {
+        if (this.lastTimestampSeen && this.lastPriceSeen !== null) {
+            if (!this.pricePoints.has(this.lastTimestampSeen)) {
+                this.pricePoints.set(this.lastTimestampSeen, {
+                    time: this.lastTimestampSeen,
+                    value: this.lastPriceSeen,
+                });
+            }
+        }
+    }
+
+    /**
      * Get collected price data, sorted by time
      */
     getPriceData(): PricePoint[] {
+        // Ensure final price is included before returning
+        this.ensureFinalPrice();
+
         const points = Array.from(this.pricePoints.values());
         // Sort by time
         return points.sort((a, b) => {
