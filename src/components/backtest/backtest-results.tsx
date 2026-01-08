@@ -3,11 +3,12 @@
 import { Dialog, DialogContent, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { ChartControls, type ChartControlsState } from "@/components/backtest/chart-controls";
 import { BacktestPriceChart } from "@/components/backtest/backtest-price-chart";
-import { useFilteredExecutions } from "@/hooks/use-filtered-executions";
 import { useChartControlsStore } from "@/stores/chart-controls-store";
+import { useElementWidth } from "@/hooks/use-element-width";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Maximize2, X } from "lucide-react";
+import { useRef } from "react";
 import type { BacktestResult } from "@/backtest/types";
 
 export function BacktestResults({ result, runId }: {
@@ -22,10 +23,8 @@ export function BacktestResults({ result, runId }: {
         setControls(runId, newState);
     };
 
-    const filteredExecutions = useFilteredExecutions(
-        result.chartData?.executions,
-        controlsState
-    );
+    const containerRef = useRef<HTMLDivElement>(null);
+    const scaleWidth = useElementWidth(containerRef, "table tr:first-child td:first-child");
 
     return (
         <>
@@ -100,13 +99,14 @@ export function BacktestResults({ result, runId }: {
                             state={controlsState}
                             onStateChange={setControlsState}
                         />
-                        <div className="h-[min(60dvh,max(400px,50dvh))] relative">
+                        <div ref={containerRef} className="h-[min(60dvh,max(400px,50dvh))] relative">
                             <Dialog>
                                 <DialogTrigger asChild>
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="absolute left-2 top-2 z-10"
+                                        className="absolute top-2 z-10"
+                                        style={{ left: `${scaleWidth + 8}px` }}
                                         aria-label="Open chart in fullscreen"
                                     >
                                         <Maximize2 className="h-4 w-4" />
@@ -135,7 +135,10 @@ export function BacktestResults({ result, runId }: {
                                         <div className="flex-1 min-h-0 w-full overflow-hidden">
                                             <BacktestPriceChart
                                                 priceData={result.chartData.priceData}
-                                                executions={filteredExecutions}
+                                                equityData={result.chartData.equityData}
+                                                cashData={result.chartData.cashData}
+                                                executions={result.chartData.executions}
+                                                controlsState={controlsState}
                                             />
                                         </div>
                                     </div>
@@ -143,7 +146,10 @@ export function BacktestResults({ result, runId }: {
                             </Dialog>
                             <BacktestPriceChart
                                 priceData={result.chartData.priceData}
-                                executions={filteredExecutions}
+                                equityData={result.chartData.equityData}
+                                cashData={result.chartData.cashData}
+                                executions={result.chartData.executions}
+                                controlsState={controlsState}
                             />
                         </div>
                     </CardContent>

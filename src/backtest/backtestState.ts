@@ -16,6 +16,7 @@ import {
 import { getActionNeededOrders as getActionNeededOrdersInternal } from "@/backtest/orders/orderManager";
 import { isTradingAllowed } from "@/backtest/pdt/pdtManager";
 import { OrderTracker } from "@/backtest/core/order-tracker";
+import type { PriceCollector } from "@/backtest/core/price-collector";
 import type { BacktestConfig } from "@/backtest/types";
 
 export function initializeBacktest(config: BacktestConfig): void {
@@ -52,19 +53,28 @@ export function initializeBacktest(config: BacktestConfig): void {
 
 export function updateEquityFromMarket(
     currentPrice: number,
-    timestamp: string
+    timestamp: string,
+    priceCollector?: PriceCollector
 ): void {
+    // Get current state to calculate equity with correct values
+    const state = backtestStore.getState();
+    if (!state.capital) return;
+
+    const equity = calculateEquity(
+        state.capital.cash,
+        state.openTrades,
+        currentPrice
+    );
+
+    const currentMax = state.capital.max ?? 0;
+    const nextMax = Math.max(currentMax, equity);
+
+    if (priceCollector) {
+        priceCollector.updateAccount(timestamp, equity, state.capital.cash);
+    }
+
     backtestStore.setState((state) => {
         if (!state.capital) return state;
-
-        const equity = calculateEquity(
-            state.capital.cash,
-            state.openTrades,
-            currentPrice
-        );
-
-        const currentMax = state.capital.max ?? 0;
-        const nextMax = Math.max(currentMax, equity);
 
         if (equity > currentMax) {
             const initialCapital = state.session?.initialCapital ?? 1;
@@ -107,7 +117,7 @@ export function addBuyOrder(
     buyAtId: string,
     orderGapPct: number,
     orderTracker?: OrderTracker,
-    priceCollector?: import("@/backtest/core/price-collector").PriceCollector
+    priceCollector?: PriceCollector
 ): void {
     if (!isTradingAllowed(timestamp, "buy")) {
         return;
@@ -138,9 +148,15 @@ export function addBuyOrder(
         orderGapPct,
     };
 
-    // Force collect price at order execution time
+    // Force collect price, equity, and cash at order execution time
     if (priceCollector) {
-        priceCollector.forceCollectPrice(timestamp, price);
+        const state = backtestStore.getState();
+        const equity = calculateEquity(
+            cash,
+            state.openTrades,
+            price
+        );
+        priceCollector.forceCollectPrice(timestamp, price, equity, cash);
     }
 
     executeBuyOrder(orderData, orderTracker, priceCollector);
@@ -157,7 +173,7 @@ export function addSellOrder(
     shares: number,
     orderGapPct: number,
     orderTracker?: OrderTracker,
-    priceCollector?: import("@/backtest/core/price-collector").PriceCollector
+    priceCollector?: PriceCollector
 ): void {
     if (!isTradingAllowed(timestamp, "sell", tradeId)) {
         return;
@@ -171,9 +187,15 @@ export function addSellOrder(
     const downPrice = price * (1 - buyBelowPct / 100);
     const upPrice = price * (1 + buyAfterSellPct / 100);
 
-    // Force collect price at order execution time
+    // Force collect price, equity, and cash at order execution time
     if (priceCollector) {
-        priceCollector.forceCollectPrice(timestamp, price);
+        const state = backtestStore.getState();
+        const equity = calculateEquity(
+            cash,
+            state.openTrades,
+            price
+        );
+        priceCollector.forceCollectPrice(timestamp, price, equity, cash);
     }
 
     executeSellOrder(

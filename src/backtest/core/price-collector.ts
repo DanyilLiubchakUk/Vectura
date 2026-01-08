@@ -1,13 +1,21 @@
 import { calculateDaysBetween } from "@/backtest/storage/dateUtils";
 import type { PricePoint } from "../types";
 
+interface DataPoint {
+    price: PricePoint;
+    equity?: PricePoint;
+    cash?: PricePoint;
+}
+
 export class PriceCollector {
-    private pricePoints: Map<string, PricePoint> = new Map(); // Use Map to avoid duplicates by time
+    private dataPoints: Map<string, DataPoint> = new Map(); // Use Map to avoid duplicates by time
     private lastSampleTime: string | null = null;
     private sampleInterval: number; // in milliseconds
     private startDate: string;
     private endDate: string;
     private lastPriceSeen: number | null = null;
+    private lastEquitySeen: number | null = null;
+    private lastCashSeen: number | null = null;
     private lastTimestampSeen: string | null = null;
 
     constructor(startDate: string, endDate: string) {
@@ -44,20 +52,48 @@ export class PriceCollector {
     /**
      * Collect a price point if it meets the sampling criteria
      */
-    collectPrice(timestamp: string, price: number): void {
+    collectPrice(timestamp: string, price: number, equity?: number, cash?: number): void {
         const timestampMs = new Date(timestamp).getTime();
         const timeKey = timestamp;
 
-        // Track the last price seen (for final price collection)
+        // Track the last values seen (for final collection)
         this.lastPriceSeen = price;
+        if (equity !== undefined) this.lastEquitySeen = equity;
+        if (cash !== undefined) this.lastCashSeen = cash;
         this.lastTimestampSeen = timestamp;
 
         // Always collect the first price point
-        if (this.pricePoints.size === 0) {
-            this.pricePoints.set(timeKey, {
-                time: timestamp,
-                value: price,
-            });
+        if (this.dataPoints.size === 0) {
+            const dataPoint: DataPoint = {
+                price: {
+                    time: timestamp,
+                    value: price,
+                },
+            };
+            // If equity/cash were provided, use them; otherwise use last seen values
+            if (equity !== undefined) {
+                dataPoint.equity = {
+                    time: timestamp,
+                    value: equity,
+                };
+            } else if (this.lastEquitySeen !== null) {
+                dataPoint.equity = {
+                    time: timestamp,
+                    value: this.lastEquitySeen,
+                };
+            }
+            if (cash !== undefined) {
+                dataPoint.cash = {
+                    time: timestamp,
+                    value: cash,
+                };
+            } else if (this.lastCashSeen !== null) {
+                dataPoint.cash = {
+                    time: timestamp,
+                    value: this.lastCashSeen,
+                };
+            }
+            this.dataPoints.set(timeKey, dataPoint);
             this.lastSampleTime = timestamp;
             return;
         }
@@ -68,40 +104,187 @@ export class PriceCollector {
             const timeSinceLastSample = timestampMs - lastSampleMs;
 
             if (timeSinceLastSample >= this.sampleInterval) {
-                this.pricePoints.set(timeKey, {
-                    time: timestamp,
-                    value: price,
-                });
+                const dataPoint: DataPoint = {
+                    price: {
+                        time: timestamp,
+                        value: price,
+                    },
+                };
+                // If equity/cash were provided, use them; otherwise use last seen values
+                if (equity !== undefined) {
+                    dataPoint.equity = {
+                        time: timestamp,
+                        value: equity,
+                    };
+                } else if (this.lastEquitySeen !== null) {
+                    dataPoint.equity = {
+                        time: timestamp,
+                        value: this.lastEquitySeen,
+                    };
+                }
+                if (cash !== undefined) {
+                    dataPoint.cash = {
+                        time: timestamp,
+                        value: cash,
+                    };
+                } else if (this.lastCashSeen !== null) {
+                    dataPoint.cash = {
+                        time: timestamp,
+                        value: this.lastCashSeen,
+                    };
+                }
+                this.dataPoints.set(timeKey, dataPoint);
                 this.lastSampleTime = timestamp;
+            } else {
+                // Update equity/cash for existing point if this timestamp already exists
+                const existing = this.dataPoints.get(timeKey);
+                if (existing) {
+                    if (equity !== undefined) {
+                        existing.equity = {
+                            time: timestamp,
+                            value: equity,
+                        };
+                    } else if (this.lastEquitySeen !== null) {
+                        existing.equity = {
+                            time: timestamp,
+                            value: this.lastEquitySeen,
+                        };
+                    }
+                    if (cash !== undefined) {
+                        existing.cash = {
+                            time: timestamp,
+                            value: cash,
+                        };
+                    } else if (this.lastCashSeen !== null) {
+                        existing.cash = {
+                            time: timestamp,
+                            value: this.lastCashSeen,
+                        };
+                    }
+                }
             }
         }
     }
 
     /**
-     * Force collect a price point at a specific time (for action creation/execution)
-     * This ensures we have price data at exact action times
+     * Update equity and cash for a specific timestamp (if price was already collected)
+     * This should be called after collectPrice for the same timestamp
      */
-    forceCollectPrice(timestamp: string, price: number): void {
+    updateAccount(timestamp: string, equity: number, cash: number): void {
         const timeKey = timestamp;
-        // Overwrite if exists, or add new
-        this.pricePoints.set(timeKey, {
-            time: timestamp,
-            value: price,
-        });
+        const existing = this.dataPoints.get(timeKey);
+
+        if (existing) {
+            existing.equity = {
+                time: timestamp,
+                value: equity,
+            };
+            existing.cash = {
+                time: timestamp,
+                value: cash,
+            };
+        }
+
+        this.lastEquitySeen = equity;
+        this.lastCashSeen = cash;
     }
 
     /**
-     * Ensure the final price point is collected
+     * Force collect a price point (and optionally equity/cash) at a specific time (for action creation/execution)
+     * This ensures we have price data at exact action times
+     */
+    forceCollectPrice(timestamp: string, price: number, equity?: number, cash?: number): void {
+        const timeKey = timestamp;
+        const existing = this.dataPoints.get(timeKey);
+
+        if (existing) {
+            existing.price = {
+                time: timestamp,
+                value: price,
+            };
+            if (equity !== undefined) {
+                existing.equity = {
+                    time: timestamp,
+                    value: equity,
+                };
+            }
+            if (cash !== undefined) {
+                existing.cash = {
+                    time: timestamp,
+                    value: cash,
+                };
+            }
+        } else {
+            const dataPoint: DataPoint = {
+                price: {
+                    time: timestamp,
+                    value: price,
+                },
+            };
+            if (equity !== undefined) {
+                dataPoint.equity = {
+                    time: timestamp,
+                    value: equity,
+                };
+            }
+            if (cash !== undefined) {
+                dataPoint.cash = {
+                    time: timestamp,
+                    value: cash,
+                };
+            }
+            this.dataPoints.set(timeKey, dataPoint);
+        }
+
+        this.lastPriceSeen = price;
+        if (equity !== undefined) this.lastEquitySeen = equity;
+        if (cash !== undefined) this.lastCashSeen = cash;
+    }
+
+    /**
+     * Ensure the final price point (and equity/cash if available) is collected
      * This should be called after all bars are processed
      * Only collects the actual final price if it hasn't been collected yet via sample interval or actions
      */
     ensureFinalPrice(): void {
         if (this.lastTimestampSeen && this.lastPriceSeen !== null) {
-            if (!this.pricePoints.has(this.lastTimestampSeen)) {
-                this.pricePoints.set(this.lastTimestampSeen, {
-                    time: this.lastTimestampSeen,
-                    value: this.lastPriceSeen,
-                });
+            const timeKey = this.lastTimestampSeen;
+            const existing = this.dataPoints.get(timeKey);
+
+            if (!existing) {
+                const dataPoint: DataPoint = {
+                    price: {
+                        time: this.lastTimestampSeen,
+                        value: this.lastPriceSeen,
+                    },
+                };
+                if (this.lastEquitySeen !== null) {
+                    dataPoint.equity = {
+                        time: this.lastTimestampSeen,
+                        value: this.lastEquitySeen,
+                    };
+                }
+                if (this.lastCashSeen !== null) {
+                    dataPoint.cash = {
+                        time: this.lastTimestampSeen,
+                        value: this.lastCashSeen,
+                    };
+                }
+                this.dataPoints.set(timeKey, dataPoint);
+            } else {
+                // Ensure equity/cash are set if we have them
+                if (this.lastEquitySeen !== null && !existing.equity) {
+                    existing.equity = {
+                        time: this.lastTimestampSeen,
+                        value: this.lastEquitySeen,
+                    };
+                }
+                if (this.lastCashSeen !== null && !existing.cash) {
+                    existing.cash = {
+                        time: this.lastTimestampSeen,
+                        value: this.lastCashSeen,
+                    };
+                }
             }
         }
     }
@@ -113,7 +296,48 @@ export class PriceCollector {
         // Ensure final price is included before returning
         this.ensureFinalPrice();
 
-        const points = Array.from(this.pricePoints.values());
+        const points = Array.from(this.dataPoints.values())
+            .map(dp => dp.price)
+            .filter(p => p && p.value !== undefined && p.value !== null);
+
+        // Sort by time
+        return points.sort((a, b) => {
+            const timeA = typeof a.time === "string" ? new Date(a.time).getTime() : a.time;
+            const timeB = typeof b.time === "string" ? new Date(b.time).getTime() : b.time;
+            return timeA - timeB;
+        });
+    }
+
+    /**
+     * Get collected equity data, sorted by time
+     */
+    getEquityData(): PricePoint[] {
+        // Ensure final data is included before returning
+        this.ensureFinalPrice();
+
+        const points = Array.from(this.dataPoints.values())
+            .map(dp => dp.equity)
+            .filter((p): p is PricePoint => p !== undefined);
+
+        // Sort by time
+        return points.sort((a, b) => {
+            const timeA = typeof a.time === "string" ? new Date(a.time).getTime() : a.time;
+            const timeB = typeof b.time === "string" ? new Date(b.time).getTime() : b.time;
+            return timeA - timeB;
+        });
+    }
+
+    /**
+     * Get collected cash data, sorted by time
+     */
+    getCashData(): PricePoint[] {
+        // Ensure final data is included before returning
+        this.ensureFinalPrice();
+
+        const points = Array.from(this.dataPoints.values())
+            .map(dp => dp.cash)
+            .filter((p): p is PricePoint => p !== undefined);
+
         // Sort by time
         return points.sort((a, b) => {
             const timeA = typeof a.time === "string" ? new Date(a.time).getTime() : a.time;

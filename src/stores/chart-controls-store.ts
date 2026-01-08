@@ -6,6 +6,8 @@ const defaultControlsState: ChartControlsState = {
     executedSell: true,
     unexecutedBuy: false,
     unexecutedSell: false,
+    showEquity: false,
+    showCash: false,
 };
 
 interface ChartControlsStore {

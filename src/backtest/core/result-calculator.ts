@@ -22,13 +22,24 @@ export async function calculateBacktestResult(
         config.startCapital > 0 ? (totalReturn / config.startCapital) * 100 : 0;
 
     // Generate chart data
-    let chartData;
+    let chartData: BacktestResult['chartData'];
     if (orderTracker && priceCollector) {
+        const priceData = priceCollector.getPriceData();
+        const equityData = priceCollector.getEquityData();
+        const cashData = priceCollector.getCashData();
 
         chartData = {
-            priceData: priceCollector.getPriceData(),
+            priceData,
             executions: orderTracker.generateExecutionLines(),
-        };
+        } as BacktestResult['chartData'];
+
+        // Add equity and cash data if available
+        if (equityData.length > 0 && chartData) {
+            chartData.equityData = equityData;
+        }
+        if (cashData.length > 0 && chartData) {
+            chartData.cashData = cashData;
+        }
     }
 
     return {

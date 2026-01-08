@@ -89,6 +89,8 @@ export interface BacktestResult {
     executionTime: string; // formatted HH:MM:SS
     chartData?: {
         priceData: PricePoint[];
+        equityData?: PricePoint[];
+        cashData?: PricePoint[];
         executions: ExecutionLine[];
     };
     [key: string]: any;

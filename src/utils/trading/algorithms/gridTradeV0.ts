@@ -23,7 +23,7 @@ export default async function gridTradeV0(
     let summaryMessage =
         "This time waited for changes in the market for a better trade";
     const actionsSummary: string[] = [];
-    await updateEquity(backtesting, currentPrice, time);
+    await updateEquity(backtesting, currentPrice, time, priceCollector);
 
     const config = backtesting
         ? { ...GRID_TRADE_V0_DEFAULT_CONFIG, ...configOverrides }
@@ -61,7 +61,7 @@ export default async function gridTradeV0(
         }
 
         if (!backtesting) {
-            await updateEquity(backtesting, currentPrice, time);
+            await updateEquity(backtesting, currentPrice, time, priceCollector);
         }
     }
 
@@ -87,7 +87,7 @@ export default async function gridTradeV0(
         }
 
         if (!backtesting) {
-            await updateEquity(backtesting, currentPrice, time);
+            await updateEquity(backtesting, currentPrice, time, priceCollector);
         }
     }
 

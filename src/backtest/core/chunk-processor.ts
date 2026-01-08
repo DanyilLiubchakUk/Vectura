@@ -4,7 +4,9 @@ import { loadPersistedDays } from "@/utils/supabase/backtestStorage";
 import { dayBlobsToMinuteBars } from "@/backtest/minuteBarStorage";
 import { PriceCollector } from "@/backtest/core/price-collector";
 import { runAlgorithm } from "@/backtest/core/algorithm-runner";
+import { backtestStore } from "@/utils/zustand/backtestStore";
 import { OrderTracker } from "@/backtest/core/order-tracker";
+import { calculateEquity } from "@/backtest/utils/helpers";
 import { CHUNK_MONTHS } from "@/backtest/constants";
 import type { ProgressCallback } from "@/backtest/types";
 
@@ -89,11 +91,21 @@ export async function processChunk(
             );
         }
 
-        if (priceCollector) {
-            priceCollector.collectPrice(bar.timestamp, bar.close);
-        }
-
         await runAlgorithm(algorithm, stock, bar, onProgress, orderTracker, priceCollector);
+
+        if (priceCollector) {
+            const state = backtestStore.getState();
+            if (state.capital) {
+                const equity = calculateEquity(
+                    state.capital.cash,
+                    state.openTrades,
+                    bar.close
+                );
+                priceCollector.collectPrice(bar.timestamp, bar.close, equity, state.capital.cash);
+            } else {
+                priceCollector.collectPrice(bar.timestamp, bar.close);
+            }
+        }
 
         processedBars += 1;
     }

@@ -7,7 +7,6 @@ import { DEFAULT_AWS_REGION } from "@/constants/runtime";
 import type {
     APIGatewayProxyWebsocketHandlerV2,
     APIGatewayProxyWebsocketEventV2,
-    Context,
 } from "aws-lambda";
 import type { BacktestConfig, BacktestProgressEvent } from "@/backtest/types";
 
@@ -133,8 +132,10 @@ async function runBacktest(
 
             // Send chartData in chunks if it exists
             if (chartData && typeof chartData === 'object') {
-                const chartDataObj = chartData as { priceData?: any[], executions?: any[] };
+                const chartDataObj = chartData as { priceData?: any[], equityData?: any[], cashData?: any[], executions?: any[] };
                 const priceData = chartDataObj.priceData || [];
+                const equityData = chartDataObj.equityData || [];
+                const cashData = chartDataObj.cashData || [];
                 const executions = chartDataObj.executions || [];
 
                 // Send priceData in chunks of 800
@@ -154,6 +155,52 @@ async function runBacktest(
                         }, endpoint);
                         if (!chunkSent) {
                             console.error(`[Lambda] Failed to send priceData chunk`);
+                            activeBacktests.delete(connectionId);
+                            return;
+                        }
+                    }
+                }
+
+                // Send equityData in chunks of 800
+                if (equityData.length > 0) {
+                    const CHUNK_SIZE = 800;
+                    const totalChunks = Math.ceil(equityData.length / CHUNK_SIZE);
+
+                    for (let i = 0; i < equityData.length; i += CHUNK_SIZE) {
+                        const chunk = equityData.slice(i, i + CHUNK_SIZE);
+                        const chunkIndex = Math.floor(i / CHUNK_SIZE);
+                        const chunkSent = await sendToConnection(connectionId, {
+                            type: "result_chunk",
+                            dataType: "equityData",
+                            chunkIndex,
+                            totalChunks,
+                            chartData: { equityData: chunk },
+                        }, endpoint);
+                        if (!chunkSent) {
+                            console.error(`[Lambda] Failed to send equityData chunk`);
+                            activeBacktests.delete(connectionId);
+                            return;
+                        }
+                    }
+                }
+
+                // Send cashData in chunks of 800
+                if (cashData.length > 0) {
+                    const CHUNK_SIZE = 800;
+                    const totalChunks = Math.ceil(cashData.length / CHUNK_SIZE);
+
+                    for (let i = 0; i < cashData.length; i += CHUNK_SIZE) {
+                        const chunk = cashData.slice(i, i + CHUNK_SIZE);
+                        const chunkIndex = Math.floor(i / CHUNK_SIZE);
+                        const chunkSent = await sendToConnection(connectionId, {
+                            type: "result_chunk",
+                            dataType: "cashData",
+                            chunkIndex,
+                            totalChunks,
+                            chartData: { cashData: chunk },
+                        }, endpoint);
+                        if (!chunkSent) {
+                            console.error(`[Lambda] Failed to send cashData chunk`);
                             activeBacktests.delete(connectionId);
                             return;
                         }

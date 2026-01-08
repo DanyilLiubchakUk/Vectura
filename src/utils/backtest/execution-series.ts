@@ -76,7 +76,7 @@ export function createExecutionSeries({
 
         if (!execution.executed) {
             executionSeries.applyOptions({
-                color: color + "80", // 80 hex = ~50% opacity
+                color: color.length === 7 ? color + "80" : color.slice(0, 7) + "80", // 80 hex = ~50% opacity
             });
         }
 

@@ -10,10 +10,11 @@ import { OrderTracker } from "@/backtest/core/order-tracker";
 export async function updateEquity(
     backtesting: boolean,
     currentPrice: number,
-    time: string
+    time: string,
+    priceCollector?: PriceCollector
 ) {
     if (backtesting) {
-        updateEquityFromMarket(currentPrice, time);
+        updateEquityFromMarket(currentPrice, time, priceCollector);
     } else {
         const { updateStore } = await import(
             /* webpackIgnore: true */ "@/auto-trade/autoTradeState"

@@ -12,6 +12,8 @@ export interface ChartControlsState {
     executedSell: boolean;
     unexecutedBuy: boolean;
     unexecutedSell: boolean;
+    showEquity: boolean;
+    showCash: boolean;
 }
 
 export function ChartControls({ state, onStateChange }: {
@@ -65,6 +67,31 @@ export function ChartControls({ state, onStateChange }: {
         onStateChange({
             ...state,
             unexecutedSell: !state.unexecutedSell,
+        });
+    };
+
+    const handleShowEquity = () => {
+        onStateChange({
+            ...state,
+            showEquity: !state.showEquity,
+        });
+    };
+
+    const handleShowCash = () => {
+        onStateChange({
+            ...state,
+            showCash: !state.showCash,
+        });
+    };
+
+    const accountAnyActive = state.showEquity || state.showCash;
+
+    const handleAccountAll = () => {
+        const newValue = !accountAnyActive;
+        onStateChange({
+            ...state,
+            showEquity: newValue,
+            showCash: newValue,
         });
     };
 
@@ -135,6 +162,32 @@ export function ChartControls({ state, onStateChange }: {
                         onClick={handleUnexecutedSell}
                     >
                         Sell
+                    </Button>
+                </ButtonGroup>
+            </div>
+
+            <div className="flex flex-col gap-1">
+                <Label
+                    className="text-muted-foreground px-1 cursor-pointer hover:text-foreground transition-colors"
+                    onClick={handleAccountAll}
+                >
+                    Account
+                </Label>
+                <ButtonGroup>
+                    <Button
+                        variant={state.showEquity ? "default" : "outline"}
+                        size="sm"
+                        onClick={handleShowEquity}
+                    >
+                        Equity
+                    </Button>
+                    <ButtonGroupSeparator />
+                    <Button
+                        variant={state.showCash ? "default" : "outline"}
+                        size="sm"
+                        onClick={handleShowCash}
+                    >
+                        Cash
                     </Button>
                 </ButtonGroup>
             </div>

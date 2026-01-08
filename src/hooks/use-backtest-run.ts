@@ -170,10 +170,16 @@ export function useBacktestRun(runId: string) {
             // Track chunked result assembly
             let baseResult: any = null;
             const priceDataChunks: any[][] = [];
+            const equityDataChunks: any[][] = [];
+            const cashDataChunks: any[][] = [];
             const executionsChunks: any[][] = [];
             let expectedPriceDataChunks = 0;
+            let expectedEquityDataChunks = 0;
+            let expectedCashDataChunks = 0;
             let expectedExecutionsChunks = 0;
             let receivedPriceDataChunks = 0;
+            let receivedEquityDataChunks = 0;
+            let receivedCashDataChunks = 0;
             let receivedExecutionsChunks = 0;
 
             ws.onmessage = (event) => {
@@ -204,13 +210,21 @@ export function useBacktestRun(runId: string) {
                     } else if (data.type === "result_chunk") {
                         // Accumulate chart data chunks
                         const chunkIndex = data.chunkIndex as number;
-                        const dataType = data.dataType as "priceData" | "executions";
+                        const dataType = data.dataType as "priceData" | "equityData" | "cashData" | "executions";
                         const totalChunks = data.totalChunks as number;
 
                         if (dataType === "priceData") {
                             expectedPriceDataChunks = totalChunks;
                             priceDataChunks[chunkIndex] = data.chartData.priceData;
                             receivedPriceDataChunks++;
+                        } else if (dataType === "equityData") {
+                            expectedEquityDataChunks = totalChunks;
+                            equityDataChunks[chunkIndex] = data.chartData.equityData;
+                            receivedEquityDataChunks++;
+                        } else if (dataType === "cashData") {
+                            expectedCashDataChunks = totalChunks;
+                            cashDataChunks[chunkIndex] = data.chartData.cashData;
+                            receivedCashDataChunks++;
                         } else if (dataType === "executions") {
                             expectedExecutionsChunks = totalChunks;
                             executionsChunks[chunkIndex] = data.chartData.executions;
@@ -218,15 +232,21 @@ export function useBacktestRun(runId: string) {
                         }
                     } else if (data.type === "result_complete") {
                         const allPriceDataChunksReceived = receivedPriceDataChunks === expectedPriceDataChunks || expectedPriceDataChunks === 0;
+                        const allEquityDataChunksReceived = receivedEquityDataChunks === expectedEquityDataChunks || expectedEquityDataChunks === 0 || receivedEquityDataChunks === 0;
+                        const allCashDataChunksReceived = receivedCashDataChunks === expectedCashDataChunks || expectedCashDataChunks === 0 || receivedCashDataChunks === 0;
                         const allExecutionsChunksReceived = receivedExecutionsChunks === expectedExecutionsChunks || expectedExecutionsChunks === 0;
 
-                        if (baseResult && allPriceDataChunksReceived && allExecutionsChunksReceived) {
+                        if (baseResult && allPriceDataChunksReceived && allEquityDataChunksReceived && allCashDataChunksReceived && allExecutionsChunksReceived) {
                             const priceData = priceDataChunks.flat();
+                            const equityData = equityDataChunks.length > 0 ? equityDataChunks.flat() : undefined;
+                            const cashData = cashDataChunks.length > 0 ? cashDataChunks.flat() : undefined;
                             const executions = executionsChunks.flat();
                             const completeResult = {
                                 ...baseResult,
                                 chartData: {
                                     priceData,
+                                    ...(equityData && { equityData }),
+                                    ...(cashData && { cashData }),
                                     executions,
                                 },
                             } as BacktestResult;
@@ -242,6 +262,8 @@ export function useBacktestRun(runId: string) {
                             console.error("[Frontend] Missing chunks or base result", {
                                 hasBaseResult: !!baseResult,
                                 priceDataChunks: { received: receivedPriceDataChunks, expected: expectedPriceDataChunks },
+                                equityDataChunks: { received: receivedEquityDataChunks, expected: expectedEquityDataChunks },
+                                cashDataChunks: { received: receivedCashDataChunks, expected: expectedCashDataChunks },
                                 executionsChunks: { received: receivedExecutionsChunks, expected: expectedExecutionsChunks },
                             });
                             store.updateRun(runId, {
