@@ -167,6 +167,15 @@ export function useBacktestRun(runId: string) {
                 );
             };
 
+            // Track chunked result assembly
+            let baseResult: any = null;
+            const priceDataChunks: any[][] = [];
+            const executionsChunks: any[][] = [];
+            let expectedPriceDataChunks = 0;
+            let expectedExecutionsChunks = 0;
+            let receivedPriceDataChunks = 0;
+            let receivedExecutionsChunks = 0;
+
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
@@ -181,13 +190,68 @@ export function useBacktestRun(runId: string) {
                             progress: data as BacktestProgressEvent,
                         });
                     } else if (data.type === "result") {
-                        store.updateRun(runId, {
-                            status: "completed",
-                            result: data as BacktestResult,
-                        });
-                        ws.close();
-                        store.updateRun(runId, { wsRef: null });
-                        resolve();
+                        baseResult = data;
+                        // If chartData is included, it means it wasn't chunked
+                        if (data.chartData) {
+                            store.updateRun(runId, {
+                                status: "completed",
+                                result: data as BacktestResult,
+                            });
+                            ws.close();
+                            store.updateRun(runId, { wsRef: null });
+                            resolve();
+                        }
+                    } else if (data.type === "result_chunk") {
+                        // Accumulate chart data chunks
+                        const chunkIndex = data.chunkIndex as number;
+                        const dataType = data.dataType as "priceData" | "executions";
+                        const totalChunks = data.totalChunks as number;
+
+                        if (dataType === "priceData") {
+                            expectedPriceDataChunks = totalChunks;
+                            priceDataChunks[chunkIndex] = data.chartData.priceData;
+                            receivedPriceDataChunks++;
+                        } else if (dataType === "executions") {
+                            expectedExecutionsChunks = totalChunks;
+                            executionsChunks[chunkIndex] = data.chartData.executions;
+                            receivedExecutionsChunks++;
+                        }
+                    } else if (data.type === "result_complete") {
+                        const allPriceDataChunksReceived = receivedPriceDataChunks === expectedPriceDataChunks || expectedPriceDataChunks === 0;
+                        const allExecutionsChunksReceived = receivedExecutionsChunks === expectedExecutionsChunks || expectedExecutionsChunks === 0;
+
+                        if (baseResult && allPriceDataChunksReceived && allExecutionsChunksReceived) {
+                            const priceData = priceDataChunks.flat();
+                            const executions = executionsChunks.flat();
+                            const completeResult = {
+                                ...baseResult,
+                                chartData: {
+                                    priceData,
+                                    executions,
+                                },
+                            } as BacktestResult;
+
+                            store.updateRun(runId, {
+                                status: "completed",
+                                result: completeResult,
+                            });
+                            ws.close();
+                            store.updateRun(runId, { wsRef: null });
+                            resolve();
+                        } else {
+                            console.error("[Frontend] Missing chunks or base result", {
+                                hasBaseResult: !!baseResult,
+                                priceDataChunks: { received: receivedPriceDataChunks, expected: expectedPriceDataChunks },
+                                executionsChunks: { received: receivedExecutionsChunks, expected: expectedExecutionsChunks },
+                            });
+                            store.updateRun(runId, {
+                                status: "error",
+                                error: "Failed to receive complete result",
+                            });
+                            ws.close();
+                            store.updateRun(runId, { wsRef: null });
+                            reject(new Error("Failed to receive complete result"));
+                        }
                     } else if (data.type === "error") {
                         store.updateRun(runId, {
                             status: "error",
@@ -220,6 +284,18 @@ export function useBacktestRun(runId: string) {
 
             ws.onclose = () => {
                 store.updateRun(runId, { wsRef: null });
+
+                // Check if the connection closed unexpectedly while backtest was running
+                const currentRun = store.getRun(runId);
+                if (currentRun?.status === "running") {
+                    if (!currentRun.result) {
+                        store.updateRun(runId, {
+                            status: "error",
+                            error: "WebSocket connection closed unexpectedly. The backtest may still be running on the server.",
+                        });
+                        reject(new Error("WebSocket connection closed unexpectedly"));
+                    }
+                }
             };
         });
     };
