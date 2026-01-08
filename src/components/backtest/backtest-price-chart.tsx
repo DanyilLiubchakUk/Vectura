@@ -84,6 +84,7 @@ export function BacktestPriceChart({
         }));
 
         priceSeries.setData(chartData);
+        chart.timeScale().fitContent();
 
         return () => {
             // Clear execution series refs before removing chart
@@ -134,6 +135,14 @@ export function BacktestPriceChart({
         }));
 
         seriesRef.current.setData(chartData);
+        
+        if (chartRef.current && chartData.length > 0) {
+            try {
+                chartRef.current.timeScale().fitContent();
+            } catch (error) {
+                console.warn("Failed to fit content after price data update:", error);
+            }
+        }
     }, [priceData]);
 
     // Update execution lines with incremental updates
@@ -237,6 +246,14 @@ export function BacktestPriceChart({
             }
         });
 
+        if (chartRef.current && priceData.length > 0) {
+            try {
+                chartRef.current.timeScale().fitContent();
+            } catch (error) {
+                console.warn("Failed to fit content after execution update:", error);
+            }
+        }
+
         // If no executions, hide or remove all series
         if (executions.length === 0) {
             const idsToProcess = Array.from(renderedIds);
@@ -267,6 +284,14 @@ export function BacktestPriceChart({
                 }
             });
             renderedIds.clear();
+            
+            if (chartRef.current && priceData.length > 0) {
+                try {
+                    chartRef.current.timeScale().fitContent();
+                } catch (error) {
+                    console.warn("Failed to fit content after clearing executions:", error);
+                }
+            }
         }
     }, [executions, priceData, themeColors]);
 
