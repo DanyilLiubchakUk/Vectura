@@ -10,8 +10,10 @@ import {
     createBuyOrderAction,
     createSellOrderAction,
 } from "@/backtest/orders/orderManager";
+import { MetricsTracker } from "@/backtest/core/metrics-tracker";
 import { PriceCollector } from "@/backtest/core/price-collector";
 import { OrderTracker } from "@/backtest/core/order-tracker";
+import { calculateEquity } from "@/backtest/utils/helpers";
 
 export interface BuyOrderData {
     id: string;
@@ -27,7 +29,8 @@ export interface BuyOrderData {
 export function executeBuyOrder(
     orderData: BuyOrderData,
     orderTracker?: OrderTracker,
-    priceCollector?: PriceCollector
+    priceCollector?: PriceCollector,
+    metricsTracker?: MetricsTracker
 ): void {
     backtestStore.setState((state) => {
         // Track executed buy order
@@ -38,10 +41,6 @@ export function executeBuyOrder(
             }
         }
 
-        if (priceCollector) {
-            priceCollector.forceCollectPrice(orderData.timestamp, orderData.price);
-        }
-
         const newTrade: Itrade = {
             id: orderData.id,
             tradeType: "buy",
@@ -49,6 +48,11 @@ export function executeBuyOrder(
             shares: orderData.shares,
             price: orderData.price,
         };
+
+        // Record trade execution in metrics tracker
+        if (metricsTracker) {
+            metricsTracker.recordTrade();
+        }
 
         const updatedPdtStatus = updatePdtStatusWithTrade(
             state.pdtStatus,
@@ -72,9 +76,6 @@ export function executeBuyOrder(
         if (orderTracker) {
             orderTracker.trackBuyOrder(followUpBuyAction, orderData.timestamp);
             orderTracker.trackSellOrder(newSellAction, orderData.timestamp);
-            if (priceCollector) {
-                priceCollector.forceCollectPrice(orderData.timestamp, orderData.price);
-            }
         }
 
         const ordersBeforeFilter = [
@@ -120,6 +121,20 @@ export function executeBuyOrder(
 
         return newState;
     });
+
+    // Force collect price, equity, and cash at execution point (after state update)
+    // Get equity from backtestState.ts calculation (correct source)
+    if (priceCollector) {
+        const state = backtestStore.getState();
+        if (state.capital) {
+            const equity = calculateEquity(
+                state.capital.cash,
+                state.openTrades,
+                orderData.price
+            );
+            priceCollector.forceCollectPrice(orderData.timestamp, orderData.price, equity, state.capital.cash);
+        }
+    }
 }
 
 export function executeSellOrder(
@@ -132,7 +147,8 @@ export function executeSellOrder(
     tradeId: string,
     orderGapPct?: number,
     orderTracker?: OrderTracker,
-    priceCollector?: PriceCollector
+    priceCollector?: PriceCollector,
+    metricsTracker?: MetricsTracker
 ): void {
     backtestStore.setState((state) => {
         // Track executed sell order
@@ -143,10 +159,6 @@ export function executeSellOrder(
             }
         }
 
-        if (priceCollector) {
-            priceCollector.forceCollectPrice(timestamp, price);
-        }
-
         const newTrade: Itrade = {
             id,
             tradeType: "sell",
@@ -155,6 +167,11 @@ export function executeSellOrder(
             price,
             closesTradeId: tradeId,
         };
+
+        // Record trade execution in metrics tracker
+        if (metricsTracker) {
+            metricsTracker.recordTrade();
+        }
 
         const updatedPdtStatus = updatePdtStatusWithTrade(
             state.pdtStatus,
@@ -173,9 +190,6 @@ export function executeSellOrder(
         if (orderTracker) {
             orderTracker.trackBuyOrder(buyBelowAction, timestamp);
             orderTracker.trackBuyOrder(buyAboveAction, timestamp);
-            if (priceCollector) {
-                priceCollector.forceCollectPrice(timestamp, price);
-            }
         }
 
         const ordersBeforeFilter = [...state.actions.toBuy, buyBelowAction, buyAboveAction];
@@ -210,4 +224,18 @@ export function executeSellOrder(
 
         return newState;
     });
+
+    // Force collect price, equity, and cash at execution point (after state update)
+    // Get equity from backtestState.ts calculation (correct source)
+    if (priceCollector) {
+        const state = backtestStore.getState();
+        if (state.capital) {
+            const equity = calculateEquity(
+                state.capital.cash,
+                state.openTrades,
+                price
+            );
+            priceCollector.forceCollectPrice(timestamp, price, equity, state.capital.cash);
+        }
+    }
 }
