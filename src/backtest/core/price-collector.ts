@@ -1,5 +1,10 @@
-import { calculateDaysBetween } from "@/backtest/storage/dateUtils";
+import { calculateDaysBetween, formatDay } from "@/backtest/storage/dateUtils";
 import type { PricePoint } from "../types";
+import {
+    MARKET_OPEN_HOUR_UTC,
+    MARKET_OPEN_MINUTE_UTC,
+    MARKET_CLOSE_HOUR_UTC,
+} from "@/backtest/constants";
 
 interface DataPoint {
     price: PricePoint;
@@ -16,9 +21,58 @@ export class PriceCollector {
     private lastEquitySeen: number | null = null;
     private lastCashSeen: number | null = null;
     private lastTimestampSeen: string | null = null;
+    private collectedDays: Set<string> = new Set();
 
     constructor(startDate: string, endDate: string) {
         this.sampleInterval = this.calculateSampleInterval(startDate, endDate);
+    }
+
+    /**
+     * Check if a timestamp is within trading hours (14:30 UTC to 21:00 UTC exclusive)
+     */
+    private isWithinTradingHours(timestamp: string): boolean {
+        const date = new Date(timestamp);
+        const hours = date.getUTCHours();
+        const minutes = date.getUTCMinutes();
+
+        if (hours < MARKET_OPEN_HOUR_UTC) return false;
+        if (hours === MARKET_OPEN_HOUR_UTC && minutes < MARKET_OPEN_MINUTE_UTC) return false;
+        if (hours >= MARKET_CLOSE_HOUR_UTC) return false;
+        return true;
+    }
+
+    /**
+     * Check if a timestamp is on a weekend (Saturday or Sunday)
+     */
+    private isWeekend(timestamp: string): boolean {
+        const date = new Date(timestamp);
+        const dayOfWeek = date.getUTCDay(); // 0 = Sunday, 6 = Saturday
+        return dayOfWeek === 0 || dayOfWeek === 6;
+    }
+
+    /**
+     * Check if a timestamp should be included (within trading hours and not weekend)
+     */
+    private shouldIncludeTimestamp(timestamp: string): boolean {
+        if (this.isWeekend(timestamp)) return false;
+        return this.isWithinTradingHours(timestamp);
+    }
+
+    /**
+     * Check if we've collected data for a specific day
+     * Used to skip gap-filling on closed days (holidays)
+     */
+    private hasCollectedDay(timestamp: string): boolean {
+        const day = formatDay(new Date(timestamp));
+        return this.collectedDays.has(day);
+    }
+
+    /**
+     * Mark a day as collected when we actually collect data for it
+     */
+    private markDayAsCollected(timestamp: string): void {
+        const day = formatDay(new Date(timestamp));
+        this.collectedDays.add(day);
     }
 
     /**
@@ -59,99 +113,15 @@ export class PriceCollector {
         if (cash !== undefined) this.lastCashSeen = cash;
         this.lastTimestampSeen = timestamp;
 
-        // Always collect the first price point
+        // Always collect the first price point (only if within trading hours and weekday)
         if (this.dataPoints.size === 0) {
-            const dataPoint: DataPoint = {
-                price: {
-                    time: timestamp,
-                    value: price,
-                },
-            };
-            if (equity !== undefined) {
-                dataPoint.equity = {
-                    time: timestamp,
-                    value: equity,
-                };
-            } else if (this.lastEquitySeen !== null) {
-                dataPoint.equity = {
-                    time: timestamp,
-                    value: this.lastEquitySeen,
-                };
-            }
-            if (cash !== undefined) {
-                dataPoint.cash = {
-                    time: timestamp,
-                    value: cash,
-                };
-            } else if (this.lastCashSeen !== null) {
-                dataPoint.cash = {
-                    time: timestamp,
-                    value: this.lastCashSeen,
-                };
-            }
-            this.dataPoints.set(timeKey, dataPoint);
-            this.lastSampleTime = timestamp;
-            this.nextSampleTime = new Date(timestampMs + this.sampleInterval).toISOString();
-            return;
-        }
-
-        // Fill missed intervals before processing current point
-        if (this.lastSampleTime && this.nextSampleTime) {
-            let nextSampleMs = new Date(this.nextSampleTime).getTime();
-            let filledCount = 0;
-            const MAX_FILL_ITERATIONS = 1000;
-
-            // Fill in any missed intervals before this timestamp
-            while (nextSampleMs <= timestampMs && filledCount < MAX_FILL_ITERATIONS) {
-                if (this.lastPriceSeen !== null) {
-                    const missedDataPoint: DataPoint = {
-                        price: {
-                            time: this.nextSampleTime,
-                            value: this.lastPriceSeen,
-                        },
-                    };
-                    if (this.lastEquitySeen !== null) {
-                        missedDataPoint.equity = {
-                            time: this.nextSampleTime,
-                            value: this.lastEquitySeen,
-                        };
-                    }
-                    if (this.lastCashSeen !== null) {
-                        missedDataPoint.cash = {
-                            time: this.nextSampleTime,
-                            value: this.lastCashSeen,
-                        };
-                    }
-                    this.dataPoints.set(this.nextSampleTime, missedDataPoint);
-                }
-
-                // Move to next interval
-                this.lastSampleTime = this.nextSampleTime;
-                nextSampleMs += this.sampleInterval;
-                this.nextSampleTime = new Date(nextSampleMs).toISOString();
-                filledCount++;
-            }
-
-            // If we hit the limit, skip ahead to current timestamp
-            if (filledCount >= MAX_FILL_ITERATIONS && nextSampleMs <= timestampMs) {
-                this.lastSampleTime = timestamp;
-                this.nextSampleTime = new Date(timestampMs + this.sampleInterval).toISOString();
-            }
-        }
-
-        // Check if we should sample this point based on interval
-        if (this.lastSampleTime) {
-            const lastSampleMs = new Date(this.lastSampleTime).getTime();
-            const timeSinceLastSample = timestampMs - lastSampleMs;
-
-            if (timeSinceLastSample >= this.sampleInterval) {
+            if (this.shouldIncludeTimestamp(timestamp)) {
                 const dataPoint: DataPoint = {
                     price: {
                         time: timestamp,
                         value: price,
                     },
                 };
-                // If equity/cash were provided, use them; otherwise use last seen values
                 if (equity !== undefined) {
                     dataPoint.equity = {
                         time: timestamp,
@@ -175,33 +145,151 @@ export class PriceCollector {
                     };
                 }
                 this.dataPoints.set(timeKey, dataPoint);
+                this.markDayAsCollected(timestamp);
                 this.lastSampleTime = timestamp;
                 this.nextSampleTime = new Date(timestampMs + this.sampleInterval).toISOString();
-            } else {
-                // Update equity/cash for existing point if this timestamp already exists
-                const existing = this.dataPoints.get(timeKey);
-                if (existing) {
+            }
+            return;
+        }
+
+        // Fill missed intervals before processing current point
+        if (this.lastSampleTime && this.nextSampleTime) {
+            let nextSampleMs = new Date(this.nextSampleTime).getTime();
+            let filledCount = 0;
+            const MAX_FILL_ITERATIONS = 1000;
+
+            // Fill in any missed intervals before this timestamp
+            while (nextSampleMs <= timestampMs && filledCount < MAX_FILL_ITERATIONS) {
+                const gapDay = formatDay(new Date(this.nextSampleTime));
+                const lastSampleDay = this.lastSampleTime ? formatDay(new Date(this.lastSampleTime)) : null;
+                const currentDay = formatDay(new Date(timestamp));
+
+                const isUnknownDay = !this.hasCollectedDay(this.nextSampleTime) &&
+                    gapDay !== lastSampleDay &&
+                    gapDay !== currentDay;
+
+                // Only include data points within trading hours, on weekdays, and on days we've collected data for
+                if (!isUnknownDay && this.shouldIncludeTimestamp(this.nextSampleTime) && this.lastPriceSeen !== null) {
+                    const missedDataPoint: DataPoint = {
+                        price: {
+                            time: this.nextSampleTime,
+                            value: this.lastPriceSeen,
+                        },
+                    };
+                    if (this.lastEquitySeen !== null) {
+                        missedDataPoint.equity = {
+                            time: this.nextSampleTime,
+                            value: this.lastEquitySeen,
+                        };
+                    }
+                    if (this.lastCashSeen !== null) {
+                        missedDataPoint.cash = {
+                            time: this.nextSampleTime,
+                            value: this.lastCashSeen,
+                        };
+                    }
+                    this.dataPoints.set(this.nextSampleTime, missedDataPoint);
+                    this.markDayAsCollected(this.nextSampleTime);
+                    // Update lastSampleTime only when we actually collect a point
+                    this.lastSampleTime = this.nextSampleTime;
+                }
+
+                // Move to next interval (always advance, even if we skip this point)
+                nextSampleMs += this.sampleInterval;
+                this.nextSampleTime = new Date(nextSampleMs).toISOString();
+                filledCount++;
+            }
+
+            // If we hit the limit, skip ahead to current timestamp
+            if (filledCount >= MAX_FILL_ITERATIONS && nextSampleMs <= timestampMs) {
+                // Only set if current timestamp is valid, otherwise find next valid
+                if (this.shouldIncludeTimestamp(timestamp)) {
+                    this.lastSampleTime = timestamp;
+                    this.nextSampleTime = new Date(timestampMs + this.sampleInterval).toISOString();
+                } else {
+                    // Find next valid timestamp
+                    let nextValidMs = timestampMs + this.sampleInterval;
+                    let attempts = 0;
+                    while (attempts < 100) {
+                        const candidate = new Date(nextValidMs).toISOString();
+                        if (this.shouldIncludeTimestamp(candidate)) {
+                            this.nextSampleTime = candidate;
+                            break;
+                        }
+                        nextValidMs += this.sampleInterval;
+                        attempts++;
+                    }
+                }
+            }
+        }
+
+        // Check if we should sample this point based on interval
+        // Only include points within trading hours and on weekdays
+        if (this.shouldIncludeTimestamp(timestamp)) {
+            if (this.lastSampleTime) {
+                const lastSampleMs = new Date(this.lastSampleTime).getTime();
+                const timeSinceLastSample = timestampMs - lastSampleMs;
+
+                if (timeSinceLastSample >= this.sampleInterval) {
+                    const dataPoint: DataPoint = {
+                        price: {
+                            time: timestamp,
+                            value: price,
+                        },
+                    };
+                    // If equity/cash were provided, use them; otherwise use last seen values
                     if (equity !== undefined) {
-                        existing.equity = {
+                        dataPoint.equity = {
                             time: timestamp,
                             value: equity,
                         };
                     } else if (this.lastEquitySeen !== null) {
-                        existing.equity = {
+                        dataPoint.equity = {
                             time: timestamp,
                             value: this.lastEquitySeen,
                         };
                     }
                     if (cash !== undefined) {
-                        existing.cash = {
+                        dataPoint.cash = {
                             time: timestamp,
                             value: cash,
                         };
                     } else if (this.lastCashSeen !== null) {
-                        existing.cash = {
+                        dataPoint.cash = {
                             time: timestamp,
                             value: this.lastCashSeen,
                         };
+                    }
+                    this.dataPoints.set(timeKey, dataPoint);
+                    this.markDayAsCollected(timestamp);
+                    this.lastSampleTime = timestamp;
+                    this.nextSampleTime = new Date(timestampMs + this.sampleInterval).toISOString();
+                } else {
+                    // Update equity/cash for existing point if this timestamp already exists
+                    const existing = this.dataPoints.get(timeKey);
+                    if (existing) {
+                        if (equity !== undefined) {
+                            existing.equity = {
+                                time: timestamp,
+                                value: equity,
+                            };
+                        } else if (this.lastEquitySeen !== null) {
+                            existing.equity = {
+                                time: timestamp,
+                                value: this.lastEquitySeen,
+                            };
+                        }
+                        if (cash !== undefined) {
+                            existing.cash = {
+                                time: timestamp,
+                                value: cash,
+                            };
+                        } else if (this.lastCashSeen !== null) {
+                            existing.cash = {
+                                time: timestamp,
+                                value: this.lastCashSeen,
+                            };
+                        }
                     }
                 }
             }
@@ -305,6 +393,7 @@ export class PriceCollector {
                 };
             }
             this.dataPoints.set(timeKey, dataPoint);
+            this.markDayAsCollected(timestamp);
         }
 
         // Update sample times if this is a new point
@@ -343,6 +432,7 @@ export class PriceCollector {
                     };
                 }
                 this.dataPoints.set(timeKey, dataPoint);
+                this.markDayAsCollected(this.lastTimestampSeen);
             } else {
                 // Ensure equity/cash are set if we have them
                 if (this.lastEquitySeen !== null && !existing.equity) {
@@ -370,7 +460,12 @@ export class PriceCollector {
 
         const points = Array.from(this.dataPoints.values())
             .map(dp => dp.price)
-            .filter(p => p && p.value !== undefined && p.value !== null);
+            .filter(p => p && p.value !== undefined && p.value !== null)
+            // Final filter: only include points within trading hours and weekdays
+            .filter(p => {
+                const timeStr = typeof p.time === "string" ? p.time : new Date(p.time).toISOString();
+                return this.shouldIncludeTimestamp(timeStr);
+            });
 
         // Sort by time
         return points.sort((a, b) => {
@@ -389,7 +484,12 @@ export class PriceCollector {
 
         const points = Array.from(this.dataPoints.values())
             .map(dp => dp.equity)
-            .filter((p): p is PricePoint => p !== undefined);
+            .filter((p): p is PricePoint => p !== undefined)
+            // Final filter: only include points within trading hours and weekdays
+            .filter(p => {
+                const timeStr = typeof p.time === "string" ? p.time : new Date(p.time).toISOString();
+                return this.shouldIncludeTimestamp(timeStr);
+            });
 
         // Sort by time
         return points.sort((a, b) => {
@@ -408,7 +508,12 @@ export class PriceCollector {
 
         const points = Array.from(this.dataPoints.values())
             .map(dp => dp.cash)
-            .filter((p): p is PricePoint => p !== undefined);
+            .filter((p): p is PricePoint => p !== undefined)
+            // Final filter: only include points within trading hours and weekdays
+            .filter(p => {
+                const timeStr = typeof p.time === "string" ? p.time : new Date(p.time).toISOString();
+                return this.shouldIncludeTimestamp(timeStr);
+            });
 
         // Sort by time
         return points.sort((a, b) => {
