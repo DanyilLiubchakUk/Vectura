@@ -41,9 +41,9 @@ function BacktestPageContent() {
                         orientation="horizontal"
                         className="h-full"
                     >
-                        <ResizablePanel defaultSize={50} minSize={400}>
-                            <ScrollArea className="h-full p-4 md:p-6 lg:p-8">
-                                <div className="space-y-6 mx-auto">
+                        <ResizablePanel defaultSize={25} minSize={400}>
+                            <ScrollArea className="h-full">
+                                <div className="space-y-6 mx-auto py-4 pl-4 pr-6 md:px-6 md:pr-8 lg:px-8 lg:pr-10">
                                     <div className="space-y-2">
                                         <h2 className="text-3xl font-bold tracking-tight">
                                             Trading Strategy Backtest
@@ -78,10 +78,8 @@ function BacktestPageContent() {
                             </ScrollArea>
                         </ResizablePanel>
                         <ResizableHandle withHandle />
-                        <ResizablePanel defaultSize={50} minSize={400}>
-                            <div className="h-full flex flex-col p-4 md:p-6 lg:p-8">
-                                <BacktestRunsList />
-                            </div>
+                        <ResizablePanel defaultSize={75} minSize={400}>
+                            <BacktestRunsList />
                         </ResizablePanel>
                     </ResizablePanelGroup>
                 </div>

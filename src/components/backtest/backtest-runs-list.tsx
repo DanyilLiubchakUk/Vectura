@@ -32,7 +32,7 @@ export function BacktestRunsList({
 
     return (
         <ScrollArea className="flex-1 h-full [&_>div>div]:block!">
-            <div className="space-y-3 px-4 pb-4">
+            <div className="space-y-3 py-4 pl-4 pr-6 md:px-6 md:pr-8 lg:px-8 lg:pr-10">
                 {runs.map((run, index) => (
                     <BacktestRunItem
                         key={run.id}
