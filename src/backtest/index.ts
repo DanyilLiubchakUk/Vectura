@@ -449,6 +449,7 @@ async function getArguments() {
         console.log(`Start Date:         ${result.startDate}`);
         console.log(`End Date:           ${result.endDate}`);
         console.log(`Starting Capital:   $${result.startCapital.toFixed(2)}`);
+        console.log(`Invested Cash:      $${result.investedCash.toFixed(2)}`);
         console.log(`Final Equity:       $${result.finalEquity.toFixed(2)}`);
         console.log(`Total Return:       $${result.totalReturn.toFixed(2)}`);
         console.log(
