@@ -2,6 +2,7 @@
 
 import { algorithmOptions } from "@/components/backtest/sections/basic-fields";
 import { MEDIA_QUERY_BREAKPOINTS } from "@/constants/media-queries";
+import { formatDate } from "@/app/ranges/utils/date-helpers";
 import { useElementSize } from "@/hooks/use-element-size";
 import { useRef, useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -26,15 +27,14 @@ export function BacktestConfigDisplay({ config }: { config: BacktestConfig }) {
     const configItems = useMemo(() => {
         const items: (string | null)[] = [
             `${algorithmName} on ${config.stock}`,
-            `${config.startDate} / ${config.endDate}`,
+            `${formatDate(config.startDate)} - ${formatDate(config.endDate)}`,
             `Buy Below: ${formatPercent(config.buyBelowPct)}`,
             `Sell Above: ${formatPercent(config.sellAbovePct)}`,
             `Buy After Sell: ${formatPercent(config.buyAfterSellPct)}`,
             `Cash per trade: ${formatPercent(config.capitalPct)}`,
             config.contributionFrequencyDays && config.contributionAmount
-                ? `Contribute $${config.contributionAmount.toLocaleString()} every ${
-                      config.contributionFrequencyDays
-                  }d`
+                ? `Contribute $${config.contributionAmount.toLocaleString()} every ${config.contributionFrequencyDays
+                }d`
                 : null,
             `Start capital: $${config.startCapital}`,
             `Cash floor: $${config.cashFloor}`,
