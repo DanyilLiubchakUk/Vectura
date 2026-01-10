@@ -56,14 +56,14 @@ For detailed AWS Lambda setup instructions, see [docs/aws-lambda-backtest-setup.
 NEXT_PUBLIC_WS_URL=wss://YOUR_API_ID.execute-api.us-east-1.amazonaws.com/prod
 ```
 
-## Planned capabilities
+## Documentation
 
--   **Dashboard UI**: Build out the Next.js frontend to display:
-    -   Portfolio overview
-    -   Trade history and analytics
-    -   Real-time performance metrics
-    -   Algorithm configuration interface
-    -   Backtest results visualization
+Vectura includes comprehensive documentation pages accessible from the web interface:
+
+-   **How the Backtest Works** (`/how-backtest-works`): Learn how to configure parameters, choose execution modes, understand the algorithm, and interpret results. Everything you need to know about using and understanding the backtest.
+-   **Development Journey** (`/development-journey`): Read about the development process: from CSV files to Zustand, finding free APIs, implementing PDT rules, and optimizing performance from 7 hours to fast execution.
+
+These pages can be accessed from the homepage or directly via their routes.
 
 ## Getting started
 
@@ -147,6 +147,48 @@ npm run backtest
 
 -   Requires AWS Lambda and API Gateway setup (see [AWS Setup Guide](docs/aws-lambda-backtest-setup.md))
 -   Set `NEXT_PUBLIC_WS_URL` in `.env.local` to your WebSocket API endpoint
+
+### Backtest Results
+
+After running a backtest, you'll see comprehensive results with visualizations and detailed metrics:
+
+#### Interactive Chart
+
+The backtest results include an interactive chart powered by TradingView Lightweight Charts that displays:
+
+-   **Price Data**: Historical stock price over the backtest period
+-   **Equity Curve**: Shows how your total account equity changed over time
+-   **Cash Balance**: Displays the cash balance throughout the backtest
+-   **Execution Lines**: Visual markers showing when buy and sell orders were placed and executed
+-   **Fullscreen Mode**: Click to expand the chart for detailed analysis
+-   **Chart Controls**: Toggle visibility of different data series (price, equity, cash, executions)
+
+#### Result Metrics
+
+The results display includes comprehensive performance and risk metrics:
+
+**Performance Metrics:**
+
+-   **Total Return**: Absolute dollar return and percentage return over the backtest period
+-   **Buy & Hold Comparison**: Comparison showing the difference between your strategy and buying and holding with the same contributions (both dollar and percentage)
+-   **Final Equity**: Total account equity at the end of the backtest
+-   **Maximum Equity**: Highest total account equity reached at any point during the backtest
+-   **Invested Cash**: Initial capital plus all additional cash invested over time
+
+**Risk Metrics:**
+
+-   **Max Drawdown**: Largest loss from a historical equity peak to a subsequent trough (shown in both dollars and percentage)
+-   **Best/Worst Month**: The percentage return achieved in the best and worst single calendar months
+-   **Longest Drawdown Duration**: The longest period of drawdown in days
+-   **Return/Max Drawdown Ratio**: A risk-adjusted performance metric
+
+**Trading Activity:**
+
+-   **Total Trades**: Total number of completed buy and sell executions during the backtest
+-   **Avg Trades/Month**: Average number of executed trades per month over the backtest period
+-   **Average Invested Capital %**: The average percentage of total capital that was invested over the backtest period
+
+All metrics include tooltips with detailed descriptions to help you understand what each metric represents and how it's calculated.
 
 ### Database setup
 
