@@ -8,6 +8,7 @@ import {
     GRID_TRADE_V0_DEFAULT_CONFIG,
     type IgridV0,
 } from "@/utils/trading/algorithms/constants";
+import type { MetricsTracker } from "@/backtest/core/metrics-tracker";
 import type { ProgressCallback } from "@/backtest/types";
 
 export async function runAlgorithm(
@@ -19,7 +20,8 @@ export async function runAlgorithm(
     },
     onProgress?: ProgressCallback,
     orderTracker?: OrderTracker,
-    priceCollector?: PriceCollector
+    priceCollector?: PriceCollector,
+    metricsTracker?: MetricsTracker
 ): Promise<void> {
     switch (algorithm) {
         case Ealgorighms.GridV0:
@@ -47,7 +49,8 @@ export async function runAlgorithm(
                     bar.timestamp,
                     gridConfig,
                     orderTracker,
-                    priceCollector
+                    priceCollector,
+                    metricsTracker
                 );
             }
             break;

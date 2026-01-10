@@ -12,16 +12,12 @@ export class PriceCollector {
     private lastSampleTime: string | null = null;
     private nextSampleTime: string | null = null;
     private sampleInterval: number; // in milliseconds
-    private startDate: string;
-    private endDate: string;
     private lastPriceSeen: number | null = null;
     private lastEquitySeen: number | null = null;
     private lastCashSeen: number | null = null;
     private lastTimestampSeen: string | null = null;
 
     constructor(startDate: string, endDate: string) {
-        this.startDate = startDate;
-        this.endDate = endDate;
         this.sampleInterval = this.calculateSampleInterval(startDate, endDate);
     }
 
@@ -104,7 +100,7 @@ export class PriceCollector {
             let nextSampleMs = new Date(this.nextSampleTime).getTime();
             let filledCount = 0;
             const MAX_FILL_ITERATIONS = 1000;
-            
+
             // Fill in any missed intervals before this timestamp
             while (nextSampleMs <= timestampMs && filledCount < MAX_FILL_ITERATIONS) {
                 if (this.lastPriceSeen !== null) {
@@ -128,14 +124,14 @@ export class PriceCollector {
                     }
                     this.dataPoints.set(this.nextSampleTime, missedDataPoint);
                 }
-                
+
                 // Move to next interval
                 this.lastSampleTime = this.nextSampleTime;
                 nextSampleMs += this.sampleInterval;
                 this.nextSampleTime = new Date(nextSampleMs).toISOString();
                 filledCount++;
             }
-            
+
             // If we hit the limit, skip ahead to current timestamp
             if (filledCount >= MAX_FILL_ITERATIONS && nextSampleMs <= timestampMs) {
                 this.lastSampleTime = timestamp;
@@ -420,5 +416,12 @@ export class PriceCollector {
             const timeB = typeof b.time === "string" ? new Date(b.time).getTime() : b.time;
             return timeA - timeB;
         });
+    }
+
+    /**
+     * Get collected the last stock price
+     */
+    getLastPrice(): number {
+        return this.lastPriceSeen || 0
     }
 }

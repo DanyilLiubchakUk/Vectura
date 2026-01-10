@@ -18,7 +18,7 @@ export function BacktestProgress({
     }
 
     return (
-        <Card>
+        <Card className="mt-4">
             <CardHeader>
                 <CardTitle className="text-lg">Backtest Progress</CardTitle>
             </CardHeader>

@@ -15,6 +15,7 @@ import {
 import { initializeContribution } from "@/backtest/core/contribution-handler";
 import { calculateBacktestResult } from "@/backtest/core/result-calculator";
 import { setExecutionMode } from "@/utils/backtest/execution-adapter";
+import { MetricsTracker } from "@/backtest/core/metrics-tracker";
 import { PriceCollector } from "@/backtest/core/price-collector";
 import { ensureSymbolRange } from "@/backtest/minuteBarStorage";
 import { processChunk } from "@/backtest/core/chunk-processor";
@@ -44,6 +45,12 @@ export async function runBacktestCore(
     // Initialize chart data collectors
     const orderTracker = new OrderTracker();
     const priceCollector = new PriceCollector(config.startDate, config.endDate);
+    const metricsTracker = new MetricsTracker(
+        config.startDate,
+        config.endDate,
+        config.startCapital,
+        config.cashFloor
+    );
 
     initializeBacktest(config);
 
@@ -115,7 +122,8 @@ export async function runBacktestCore(
             processedBars,
             onProgress,
             orderTracker,
-            priceCollector
+            priceCollector,
+            metricsTracker
         );
 
         processedBars = chunkResult.processedBars;
@@ -173,12 +181,16 @@ export async function runBacktestCore(
 
     await new Promise((resolve) => setTimeout(resolve, 500));
 
+    const finalPrice = priceCollector.getLastPrice()
+
     const result = await calculateBacktestResult(
         config,
         processedBars,
         engineStartTime,
         orderTracker,
-        priceCollector
+        priceCollector,
+        metricsTracker,
+        finalPrice
     );
 
     await emitProgress(onProgress, {
@@ -189,6 +201,7 @@ export async function runBacktestCore(
             processedBars,
             totalBars: processedBars,
             finalEquity: result.finalEquity,
+            investedCash: result.investedCash,
             totalReturn: result.totalReturn,
             totalReturnPercent: result.totalReturnPercent,
             executionTime: result.executionTime,

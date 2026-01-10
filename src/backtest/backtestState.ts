@@ -16,6 +16,7 @@ import {
 import { getActionNeededOrders as getActionNeededOrdersInternal } from "@/backtest/orders/orderManager";
 import { isTradingAllowed } from "@/backtest/pdt/pdtManager";
 import { OrderTracker } from "@/backtest/core/order-tracker";
+import type { MetricsTracker } from "@/backtest/core/metrics-tracker";
 import type { PriceCollector } from "@/backtest/core/price-collector";
 import type { BacktestConfig } from "@/backtest/types";
 
@@ -117,7 +118,8 @@ export function addBuyOrder(
     buyAtId: string,
     orderGapPct: number,
     orderTracker?: OrderTracker,
-    priceCollector?: PriceCollector
+    priceCollector?: PriceCollector,
+    metricsTracker?: MetricsTracker
 ): void {
     if (!isTradingAllowed(timestamp, "buy")) {
         return;
@@ -150,7 +152,6 @@ export function addBuyOrder(
 
     // Force collect price, equity, and cash at order execution time
     if (priceCollector) {
-        const state = backtestStore.getState();
         const equity = calculateEquity(
             cash,
             state.openTrades,
@@ -159,7 +160,7 @@ export function addBuyOrder(
         priceCollector.forceCollectPrice(timestamp, price, equity, cash);
     }
 
-    executeBuyOrder(orderData, orderTracker, priceCollector);
+    executeBuyOrder(orderData, orderTracker, priceCollector, metricsTracker);
     setCapital(cash);
 }
 
@@ -173,7 +174,8 @@ export function addSellOrder(
     shares: number,
     orderGapPct: number,
     orderTracker?: OrderTracker,
-    priceCollector?: PriceCollector
+    priceCollector?: PriceCollector,
+    metricsTracker?: MetricsTracker
 ): void {
     if (!isTradingAllowed(timestamp, "sell", tradeId)) {
         return;
@@ -189,7 +191,6 @@ export function addSellOrder(
 
     // Force collect price, equity, and cash at order execution time
     if (priceCollector) {
-        const state = backtestStore.getState();
         const equity = calculateEquity(
             cash,
             state.openTrades,
@@ -208,7 +209,8 @@ export function addSellOrder(
         tradeId,
         orderGapPct,
         orderTracker,
-        priceCollector
+        priceCollector,
+        metricsTracker
     );
     setCapital(cash);
 }

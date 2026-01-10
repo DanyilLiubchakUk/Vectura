@@ -6,6 +6,7 @@ import {
 } from "@/backtest/backtestState";
 import { PriceCollector } from "@/backtest/core/price-collector";
 import { OrderTracker } from "@/backtest/core/order-tracker";
+import type { MetricsTracker } from "@/backtest/core/metrics-tracker";
 
 export async function updateEquity(
     backtesting: boolean,
@@ -52,7 +53,8 @@ export async function addBuyOrder(
     buyAtId: string,
     orderGapPct: number,
     orderTracker?: OrderTracker,
-    priceCollector?: PriceCollector
+    priceCollector?: PriceCollector,
+    metricsTracker?: MetricsTracker
 ): Promise<{
     price: number;
     shares: number;
@@ -68,7 +70,8 @@ export async function addBuyOrder(
             buyAtId,
             orderGapPct,
             orderTracker,
-            priceCollector
+            priceCollector,
+            metricsTracker
         );
     } else {
         const { addAutoTradeBuyOrder } = await import(
@@ -98,7 +101,8 @@ export async function addSellOrder(
     shares: number,
     orderGapPct: number,
     orderTracker?: OrderTracker,
-    priceCollector?: PriceCollector
+    priceCollector?: PriceCollector,
+    metricsTracker?: MetricsTracker
 ): Promise<{
     price: number;
     shares: number;
@@ -114,7 +118,8 @@ export async function addSellOrder(
             shares,
             orderGapPct,
             orderTracker,
-            priceCollector
+            priceCollector,
+            metricsTracker
         );
     } else {
         const { addAutoTradeSellOrder } = await import(

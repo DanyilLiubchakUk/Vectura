@@ -10,6 +10,7 @@ import {
 } from "@/utils/trading/algorithms/constants";
 import { PriceCollector } from "@/backtest/core/price-collector";
 import { OrderTracker } from "@/backtest/core/order-tracker";
+import type { MetricsTracker } from "@/backtest/core/metrics-tracker";
 
 export default async function gridTradeV0(
     stock: string,
@@ -18,7 +19,8 @@ export default async function gridTradeV0(
     time: string,
     configOverrides?: IgridV0,
     orderTracker?: OrderTracker,
-    priceCollector?: PriceCollector
+    priceCollector?: PriceCollector,
+    metricsTracker?: MetricsTracker
 ): Promise<string> {
     let summaryMessage =
         "This time waited for changes in the market for a better trade";
@@ -51,7 +53,8 @@ export default async function gridTradeV0(
             buyOrder.id,
             config.orderGapPct,
             orderTracker,
-            priceCollector
+            priceCollector,
+            metricsTracker
         );
 
         if (!backtesting && result) {
@@ -77,7 +80,8 @@ export default async function gridTradeV0(
             sellOrder.shares,
             config.orderGapPct,
             orderTracker,
-            priceCollector
+            priceCollector,
+            metricsTracker
         );
 
         if (!backtesting && result) {

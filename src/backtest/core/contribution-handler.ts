@@ -24,21 +24,39 @@ export function initializeContribution(
     return null;
 }
 
+export interface ProcessedContribution {
+    timestamp: string;
+    amount: number;
+}
+
+export interface ContributionProcessResult {
+    nextContributionDate: Date | null;
+    processedContributions: ProcessedContribution[];
+}
+
 export function processContributions(
     barTimestamp: string,
     nextContributionDate: Date | null,
     contributionAmount: number,
     contributionFrequencyDays: number
-): Date | null {
+): ContributionProcessResult {
     if (!nextContributionDate) {
-        return null;
+        return {
+            nextContributionDate: null,
+            processedContributions: [],
+        };
     }
 
     const barDate = new Date(barTimestamp);
     let currentNextDate = nextContributionDate;
+    const processedContributions: ProcessedContribution[] = [];
 
     while (currentNextDate && barDate >= currentNextDate) {
         addExternalCapital(contributionAmount);
+        processedContributions.push({
+            timestamp: barTimestamp,
+            amount: contributionAmount,
+        });
 
         currentNextDate = new Date(currentNextDate);
         currentNextDate.setUTCDate(
@@ -46,5 +64,8 @@ export function processContributions(
         );
     }
 
-    return currentNextDate;
+    return {
+        nextContributionDate: currentNextDate,
+        processedContributions,
+    };
 }

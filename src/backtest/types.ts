@@ -83,6 +83,7 @@ export interface BacktestResult {
     endDate: string;
     startCapital: number;
     finalEquity: number;
+    investedCash: number;
     totalReturn: number;
     totalReturnPercent: number;
     processedBars: number;
@@ -92,6 +93,22 @@ export interface BacktestResult {
         equityData?: PricePoint[];
         cashData?: PricePoint[];
         executions: ExecutionLine[];
+    };
+    metrics?: {
+        averageInvestedCapitalPct: number;
+        maximumEquity: number;
+        maximumDrawdownPct: number;
+        maximumDrawdownDollar: number;
+        longestDrawdownDurationDays: number;
+        totalTradesExecuted: number;
+        averageTradesPerMonth: number;
+        bestMonthReturnPct: number;
+        worstMonthReturnPct: number;
+        returnMaxDrawdownRatio: number;
+        buyHoldComparison: {
+            dollarDifference: number;
+            percentageDifference: number;
+        };
     };
     [key: string]: any;
 }

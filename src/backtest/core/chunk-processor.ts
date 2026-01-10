@@ -3,6 +3,7 @@ import { processContributions } from "@/backtest/core/contribution-handler";
 import { loadPersistedDays } from "@/utils/supabase/backtestStorage";
 import { dayBlobsToMinuteBars } from "@/backtest/minuteBarStorage";
 import { PriceCollector } from "@/backtest/core/price-collector";
+import { MetricsTracker } from "@/backtest/core/metrics-tracker";
 import { runAlgorithm } from "@/backtest/core/algorithm-runner";
 import { backtestStore } from "@/utils/zustand/backtestStore";
 import { OrderTracker } from "@/backtest/core/order-tracker";
@@ -32,7 +33,8 @@ export async function processChunk(
     startProcessedBars: number,
     onProgress?: ProgressCallback,
     orderTracker?: OrderTracker,
-    priceCollector?: PriceCollector
+    priceCollector?: PriceCollector,
+    metricsTracker?: MetricsTracker
 ): Promise<ProcessChunkResult> {
     let chunkEnd = addMonths(chunkStart, CHUNK_MONTHS);
     if (!isDayBeforeOrEqual(chunkEnd, endDate)) {
@@ -73,6 +75,7 @@ export async function processChunk(
     let shouldBreak = false;
     let processedBars = startProcessedBars;
     let currentNextContributionDate = nextContributionDate;
+    let isFirstBar = startProcessedBars === 0;
 
     for (let i = chunkStartIndex; i < minuteBars.length; i++) {
         const bar = minuteBars[i];
@@ -82,27 +85,60 @@ export async function processChunk(
             break;
         }
 
+        let contributionResult = null;
         if (currentNextContributionDate) {
-            currentNextContributionDate = processContributions(
+            contributionResult = processContributions(
                 bar.timestamp,
                 currentNextContributionDate,
                 contributionAmount,
                 contributionFrequencyDays
             );
+            currentNextContributionDate = contributionResult.nextContributionDate;
+
+            if (metricsTracker && contributionResult.processedContributions.length > 0) {
+                for (const contribution of contributionResult.processedContributions) {
+                    metricsTracker.processBuyHoldContribution(
+                        contribution.timestamp,
+                        contribution.amount,
+                        bar.close
+                    );
+                }
+            }
         }
 
-        await runAlgorithm(algorithm, stock, bar, onProgress, orderTracker, priceCollector);
+        // Initialize Buy & Hold with first available price if this is the first bar
+        if (metricsTracker && isFirstBar) {
+            metricsTracker.initializeBuyHold(bar.close);
+            isFirstBar = false;
+        }
 
-        if (priceCollector) {
-            const state = backtestStore.getState();
-            if (state.capital) {
-                const equity = calculateEquity(
-                    state.capital.cash,
-                    state.openTrades,
-                    bar.close
-                );
+        await runAlgorithm(algorithm, stock, bar, onProgress, orderTracker, priceCollector, metricsTracker);
+
+        const state = backtestStore.getState();
+        if (state.capital) {
+            const equity = calculateEquity(
+                state.capital.cash,
+                state.openTrades,
+                bar.close
+            );
+
+
+            if (metricsTracker) {
+                // Verify equity is a valid number before recording
+                if (isFinite(equity) && equity >= 0) {
+                    metricsTracker.recordEquityUpdate(
+                        bar.timestamp,
+                        equity,
+                        state.capital.cash
+                    );
+                }
+            }
+
+            if (priceCollector) {
                 priceCollector.collectPrice(bar.timestamp, bar.close, equity, state.capital.cash);
-            } else {
+            }
+        } else {
+            if (priceCollector) {
                 priceCollector.collectPrice(bar.timestamp, bar.close);
             }
         }
