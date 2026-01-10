@@ -290,7 +290,7 @@ export function BacktestResults({ result, runId }: {
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="absolute top-2 z-10"
+                                        className="absolute top-2 z-10 transition-none"
                                         style={{ left: `${scaleWidth + 8}px` }}
                                         aria-label="Open chart in fullscreen"
                                     >
