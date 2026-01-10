@@ -1,27 +1,40 @@
 "use client";
 
-import { Dialog, DialogContent, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { ChartControls, type ChartControlsState } from "@/components/backtest/chart-controls";
 import { BacktestPriceChart } from "@/components/backtest/backtest-price-chart";
 import { MetricTableRow } from "@/components/backtest/metric-table-row";
 import { useChartControlsStore } from "@/stores/chart-controls-store";
 import { MEDIA_QUERY_BREAKPOINTS } from "@/constants/media-queries";
+import { useRef, useState, useTransition, useEffect } from "react";
 import { useElementWidth } from "@/hooks/use-element-width";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useElementSize } from "@/hooks/use-element-size";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Maximize2, X } from "lucide-react";
+import { Maximize2, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useRef } from "react";
 import type { BacktestResult } from "@/backtest/types";
 
-function formatCurrency(num: number) {
+function formatCurrency(num: number | undefined | null) {
+    if (typeof num !== "number" || isNaN(num)) return "-";
     return num.toLocaleString(undefined, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 2,
     });
+}
+
+function ChartLoader() {
+    return (
+        <div className="absolute inset-0 flex items-center justify-center bg-card rounded-md border border-border">
+            <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm font-medium text-foreground">Loading chart data...</p>
+                <p className="text-xs text-muted-foreground">This may take a few seconds</p>
+            </div>
+        </div>
+    );
 }
 
 export function BacktestResults({ result, runId }: {
@@ -36,8 +49,71 @@ export function BacktestResults({ result, runId }: {
         setControls(runId, newState);
     };
 
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isPreparingFullscreen, setIsPreparingFullscreen] = useState(false);
+    const [shouldRenderChart, setShouldRenderChart] = useState(false);
+    const [shouldRenderMainChart, setShouldRenderMainChart] = useState(false);
+    const [isMainChartReady, setIsMainChartReady] = useState(false);
+    const [isFullscreenChartReady, setIsFullscreenChartReady] = useState(false);
+    const [, startTransition] = useTransition();
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const scaleWidth = useElementWidth(chartContainerRef, "table tr:first-child td:first-child");
+    const resultIdRef = useRef<string | null>(null);
+    const hasStartedMainChartRef = useRef(false);
+    const hasStartedFullscreenChartRef = useRef(false);
+
+    useEffect(() => {
+        if (resultIdRef.current !== runId) {
+            resultIdRef.current = runId;
+            setIsMainChartReady(false);
+            setIsFullscreenChartReady(false);
+            setShouldRenderMainChart(false);
+            setShouldRenderChart(false);
+            hasStartedMainChartRef.current = false;
+            hasStartedFullscreenChartRef.current = false;
+        }
+    }, [runId]);
+
+    useEffect(() => {
+        if (!hasStartedMainChartRef.current && result.chartData) {
+            hasStartedMainChartRef.current = true;
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    startTransition(() => {
+                        setShouldRenderMainChart(true);
+                    });
+                });
+            });
+        }
+    }, [result.chartData, startTransition]);
+
+    const handleFullscreenButtonClick = () => {
+        setIsPreparingFullscreen(true);
+        if (!hasStartedFullscreenChartRef.current && result.chartData) {
+            hasStartedFullscreenChartRef.current = true;
+            setIsFullscreenChartReady(false);
+            startTransition(() => {
+                setShouldRenderChart(true);
+            });
+        }
+    };
+
+    useEffect(() => {
+        if (isFullscreenChartReady && isPreparingFullscreen && !isDialogOpen) {
+            setIsDialogOpen(true);
+            setIsPreparingFullscreen(false);
+        }
+    }, [isFullscreenChartReady, isPreparingFullscreen, isDialogOpen]);
+
+    const handleDialogOpenChange = (open: boolean) => {
+        if (!open) {
+            setIsDialogOpen(false);
+            setIsPreparingFullscreen(false);
+            hasStartedFullscreenChartRef.current = false;
+            setShouldRenderChart(false);
+            setIsFullscreenChartReady(false);
+        }
+    };
 
     const metrics = result.metrics;
     const cardRef = useRef<HTMLDivElement>(null);
@@ -285,18 +361,40 @@ export function BacktestResults({ result, runId }: {
                             onStateChange={setControlsState}
                         />
                         <div ref={chartContainerRef} className="h-[min(60dvh,max(400px,50dvh))] relative">
-                            <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="absolute top-2 z-10 transition-none"
-                                        style={{ left: `${scaleWidth + 8}px` }}
-                                        aria-label="Open chart in fullscreen"
-                                    >
-                                        <Maximize2 className="h-4 w-4" />
-                                    </Button>
-                                </DialogTrigger>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="absolute top-2 z-10 transition-none"
+                                style={{ left: `${scaleWidth + 8}px` }}
+                                aria-label="Open chart in fullscreen"
+                                onClick={handleFullscreenButtonClick}
+                                disabled={isPreparingFullscreen}
+                            >
+                                {(isPreparingFullscreen || (shouldRenderChart && !isFullscreenChartReady)) ? (
+                                    <div className="relative w-4 h-4 flex items-center justify-center">
+                                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                        <Maximize2 className="h-3 w-3 absolute opacity-40" />
+                                    </div>
+                                ) : (
+                                    <Maximize2 className="h-4 w-4" />
+                                )}
+                            </Button>
+                            {shouldRenderChart && !isDialogOpen && (
+                                <div 
+                                    className="fixed -left-[9999px] -top-[9999px] w-screen h-screen pointer-events-none opacity-0"
+                                    style={{ visibility: 'hidden', zIndex: -1 }}
+                                >
+                                    <BacktestPriceChart
+                                        priceData={result.chartData.priceData}
+                                        equityData={result.chartData.equityData}
+                                        cashData={result.chartData.cashData}
+                                        executions={result.chartData.executions}
+                                        controlsState={controlsState}
+                                        onReady={() => setIsFullscreenChartReady(true)}
+                                    />
+                                </div>
+                            )}
+                            <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
                                 <DialogContent
                                     className="min-w-full w-screen min-h-screen h-screen p-4 md:p-6 flex flex-col top-0! left-0! translate-x-0! translate-y-0! rounded-none! bg-card"
                                     showCloseButton={false}
@@ -312,30 +410,43 @@ export function BacktestResults({ result, runId }: {
                                         </Button>
                                     </DialogClose>
                                     <DialogTitle className="sr-only">Chart Fullscreen View</DialogTitle>
+                                    <DialogDescription className="sr-only">
+                                        Fullscreen view of the backtest price chart with execution lines and performance metrics.
+                                    </DialogDescription>
                                     <div className="flex-1 flex flex-col gap-4 overflow-hidden min-w-0">
                                         <ChartControls
                                             state={controlsState}
                                             onStateChange={setControlsState}
                                         />
-                                        <div className="flex-1 min-h-0 w-full overflow-hidden">
-                                            <BacktestPriceChart
-                                                priceData={result.chartData.priceData}
-                                                equityData={result.chartData.equityData}
-                                                cashData={result.chartData.cashData}
-                                                executions={result.chartData.executions}
-                                                controlsState={controlsState}
-                                            />
+                                        <div className="flex-1 min-h-0 w-full overflow-hidden relative">
+                                            {isDialogOpen && !isFullscreenChartReady && <ChartLoader />}
+                                            {isDialogOpen && isFullscreenChartReady && (
+                                                <BacktestPriceChart
+                                                    priceData={result.chartData.priceData}
+                                                    equityData={result.chartData.equityData}
+                                                    cashData={result.chartData.cashData}
+                                                    executions={result.chartData.executions}
+                                                    controlsState={controlsState}
+                                                    onReady={() => setIsFullscreenChartReady(true)}
+                                                />
+                                            )}
                                         </div>
                                     </div>
                                 </DialogContent>
                             </Dialog>
-                            <BacktestPriceChart
-                                priceData={result.chartData.priceData}
-                                equityData={result.chartData.equityData}
-                                cashData={result.chartData.cashData}
-                                executions={result.chartData.executions}
-                                controlsState={controlsState}
-                            />
+                            <div className="relative w-full h-full">
+                                {(!shouldRenderMainChart || !isMainChartReady) && <ChartLoader />}
+                                {shouldRenderMainChart && (
+                                    <BacktestPriceChart
+                                        priceData={result.chartData.priceData}
+                                        equityData={result.chartData.equityData}
+                                        cashData={result.chartData.cashData}
+                                        executions={result.chartData.executions}
+                                        controlsState={controlsState}
+                                        onReady={() => setIsMainChartReady(true)}
+                                    />
+                                )}
+                            </div>
                         </div>
                     </CardContent>
                 </Card>

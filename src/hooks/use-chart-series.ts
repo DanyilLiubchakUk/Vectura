@@ -36,6 +36,7 @@ export function useChartSeries({
     executions,
     controlsState,
     themeColors,
+    onReady,
 }: {
     chartRef: React.RefObject<IChartApi | null>;
     priceData: PricePoint[];
@@ -44,6 +45,7 @@ export function useChartSeries({
     executions: ExecutionLine[];
     controlsState: ChartControlsState;
     themeColors: ChartThemeColors;
+    onReady?: () => void;
 }) {
     const priceSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const equitySeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
@@ -53,7 +55,6 @@ export function useChartSeries({
     const themeColorsRef = useRef<ChartThemeColors>(themeColors);
     const controlsStateRef = useRef<ChartControlsState>(controlsState);
 
-    // Keep refs in sync with latest values
     useEffect(() => {
         themeColorsRef.current = themeColors;
     }, [themeColors]);
@@ -62,126 +63,130 @@ export function useChartSeries({
         controlsStateRef.current = controlsState;
     }, [controlsState]);
 
-    // Memoize chart data conversions
-    const priceChartData = useMemo(() => (priceData.length > 0 ? convertToChartData(priceData) : []),
-        [priceData]);
-    const equityChartData = useMemo(() => (equityData && equityData.length > 0 ? convertToChartData(equityData) : null),
-        [equityData]);
-    const cashChartData = useMemo(() => (cashData && cashData.length > 0 ? convertToChartData(cashData) : null),
-        [cashData]);
+    const priceChartData = useMemo(
+        () => (priceData.length > 0 ? convertToChartData(priceData) : []),
+        [priceData]
+    );
+    const equityChartData = useMemo(
+        () => (equityData && equityData.length > 0 ? convertToChartData(equityData) : null),
+        [equityData]
+    );
+    const cashChartData = useMemo(
+        () => (cashData && cashData.length > 0 ? convertToChartData(cashData) : null),
+        [cashData]
+    );
 
-    // Initialize chart series (runs once when chart is available)
+    const priceFormat = {
+        type: "price" as const,
+        precision: 2,
+        minMove: 0.01,
+    };
+
     useEffect(() => {
         const chart = chartRef.current;
         if (!chart) return;
 
-        // Create price series
         const priceSeries = chart.addSeries(LineSeries, {
             color: themeColorsRef.current.priceLine,
             lineWidth: 2,
-            priceFormat: {
-                type: "price",
-                precision: 2,
-                minMove: 0.01,
-            },
+            priceFormat,
         }) as ISeriesApi<"Line">;
         priceSeriesRef.current = priceSeries;
 
-        // Create equity series on left price scale
         const equitySeries = chart.addSeries(LineSeries, {
             color: themeColorsRef.current.equityLine,
             lineWidth: 2,
             priceScaleId: "left",
-            priceFormat: {
-                type: "price",
-                precision: 2,
-                minMove: 0.01,
-            },
+            priceFormat,
         }) as ISeriesApi<"Line">;
         equitySeriesRef.current = equitySeries;
 
-        // Create cash series on left price scale
         const cashSeries = chart.addSeries(LineSeries, {
             color: themeColorsRef.current.cashLine,
             lineWidth: 2,
             priceScaleId: "left",
-            priceFormat: {
-                type: "price",
-                precision: 2,
-                minMove: 0.01,
-            },
+            priceFormat,
         }) as ISeriesApi<"Line">;
         cashSeriesRef.current = cashSeries;
 
         chart.timeScale().fitContent();
 
         return () => {
-            // Cleanup: remove all execution series and clear refs
-            executionSeriesRefs.current.forEach((series) => {
-                try {
-                    chart.removeSeries(series);
-                } catch (error) {
-                    console.warn("Failed to remove execution series during cleanup:", error);
-                }
-            });
+            const chartForCleanup = chartRef.current;
+            if (chartForCleanup) {
+                executionSeriesRefs.current.forEach((series) => {
+                    if (series) {
+                        try {
+                            chartForCleanup.removeSeries(series);
+                        } catch {
+                            // Chart may be destroyed
+                        }
+                    }
+                });
+            }
             executionSeriesRefs.current.clear();
             renderedExecutionIdsRef.current.clear();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chartRef]);
 
-    // Update price data
     useEffect(() => {
         const priceSeries = priceSeriesRef.current;
-        if (!priceSeries || priceChartData.length === 0) return;
-        priceSeries.setData(priceChartData);
-    }, [priceChartData]);
+        if (!priceSeries || priceChartData.length === 0 || !chartRef.current) return;
+        try {
+            priceSeries.setData(priceChartData);
+            requestAnimationFrame(() => {
+                onReady?.();
+            });
+        } catch {
+            // Chart may be destroyed
+        }
+    }, [priceChartData, chartRef, onReady]);
 
-    // Update equity data
     useEffect(() => {
         const equitySeries = equitySeriesRef.current;
-        if (!equitySeries) return;
-        if (equityChartData && equityChartData.length > 0) {
+        if (!equitySeries || !chartRef.current || !equityChartData?.length) return;
+        try {
             equitySeries.setData(equityChartData);
+        } catch {
+            // Chart may be destroyed
         }
-    }, [equityChartData]);
+    }, [equityChartData, chartRef]);
 
-    // Update cash data
     useEffect(() => {
         const cashSeries = cashSeriesRef.current;
-        if (!cashSeries) return;
-        if (cashChartData && cashChartData.length > 0) {
+        if (!cashSeries || !chartRef.current || !cashChartData?.length) return;
+        try {
             cashSeries.setData(cashChartData);
+        } catch {
+            // Chart may be destroyed
         }
-    }, [cashChartData]);
+    }, [cashChartData, chartRef]);
 
-    // Update theme colors for all series
     useEffect(() => {
-        const priceSeries = priceSeriesRef.current;
-        if (priceSeries) {
-            priceSeries.applyOptions({ color: themeColors.priceLine });
+        if (!chartRef.current) return;
+
+        try {
+            priceSeriesRef.current?.applyOptions({ color: themeColors.priceLine });
+            equitySeriesRef.current?.applyOptions({ color: themeColors.equityLine });
+            cashSeriesRef.current?.applyOptions({ color: themeColors.cashLine });
+        } catch {
+            // Series may be invalid
         }
 
-        const equitySeries = equitySeriesRef.current;
-        if (equitySeries) {
-            equitySeries.applyOptions({ color: themeColors.equityLine });
-        }
-
-        const cashSeries = cashSeriesRef.current;
-        if (cashSeries) {
-            cashSeries.applyOptions({ color: themeColors.cashLine });
-        }
-
-        // Update execution series colors
         executionSeriesRefs.current.forEach((series, id) => {
+            if (!series) return;
             const execution = executions.find((e) => e.id === id);
             if (!execution) return;
             const color = execution.type === "buy" ? themeColors.buyLine : themeColors.sellLine;
-            series.applyOptions({ color });
+            try {
+                series.applyOptions({ color });
+            } catch {
+                // Series may be invalid
+            }
         });
-    }, [themeColors, executions]);
+    }, [themeColors, executions, chartRef]);
 
-    // Manage execution series (create/remove)
     useEffect(() => {
         const chart = chartRef.current;
         if (!chart || priceChartData.length === 0) return;
@@ -192,70 +197,70 @@ export function useChartSeries({
         const currentIds = new Set(executions.map((e) => e.id));
         const renderedIds = renderedExecutionIdsRef.current;
 
-        // Remove series for executions that no longer exist
-        Array.from(renderedIds).forEach((id) => {
-            if (!currentIds.has(id)) {
+        const idsToRemove = Array.from(renderedIds).filter((id) => !currentIds.has(id));
+        if (idsToRemove.length > 0 && chartRef.current) {
+            idsToRemove.forEach((id) => {
                 const series = executionSeriesRefs.current.get(id);
                 if (series) {
                     try {
-                        chart.removeSeries(series);
-                    } catch (error) {
-                        console.warn("Failed to remove execution series:", error);
+                        chartRef.current?.removeSeries(series);
+                    } catch {
+                        // Series may already be removed
                     }
                 }
                 executionSeriesRefs.current.delete(id);
                 renderedIds.delete(id);
-            }
-        });
+            });
+        }
 
-        // Create series for new executions
-        executions.forEach((execution) => {
-            if (!renderedIds.has(execution.id)) {
-                const series = createExecutionSeries({
-                    execution,
-                    chart,
-                    maxTime,
-                    themeColors: themeColorsRef.current,
+        const idsToCreate = executions.filter((execution) => !renderedIds.has(execution.id));
+        idsToCreate.forEach((execution) => {
+            const series = createExecutionSeries({
+                execution,
+                chart,
+                maxTime,
+                themeColors: themeColorsRef.current,
+            });
+            if (series) {
+                executionSeriesRefs.current.set(execution.id, series);
+                renderedIds.add(execution.id);
+                series.applyOptions({
+                    visible: shouldShowExecution(execution, controlsStateRef.current),
                 });
-                if (series) {
-                    executionSeriesRefs.current.set(execution.id, series);
-                    renderedIds.add(execution.id);
-                    // Set initial visibility
-                    series.applyOptions({
-                        visible: shouldShowExecution(execution, controlsStateRef.current),
-                    });
-                }
             }
         });
     }, [chartRef, executions, priceChartData]);
 
-    // Update execution series visibility
     useEffect(() => {
+        if (!chartRef.current) return;
+
         executions.forEach((execution) => {
             const series = executionSeriesRefs.current.get(execution.id);
             if (!series) return;
-            series.applyOptions({
-                visible: shouldShowExecution(execution, controlsState),
-            });
+            try {
+                series.applyOptions({
+                    visible: shouldShowExecution(execution, controlsState),
+                });
+            } catch {
+                // Series may be invalid
+            }
         });
-    }, [executions, controlsState]);
+    }, [executions, controlsState, chartRef]);
 
-    // Update equity and cash visibility
     useEffect(() => {
-        const equitySeries = equitySeriesRef.current;
-        if (equitySeries) {
-            equitySeries.applyOptions({
+        if (!chartRef.current) return;
+
+        try {
+            equitySeriesRef.current?.applyOptions({
                 visible: controlsState.showEquity && !!equityChartData && equityChartData.length > 0,
             });
-        }
-
-        const cashSeries = cashSeriesRef.current;
-        if (cashSeries) {
-            cashSeries.applyOptions({
+            cashSeriesRef.current?.applyOptions({
                 visible: controlsState.showCash && !!cashChartData && cashChartData.length > 0,
             });
+        } catch {
+            // Series may be invalid
         }
-    }, [controlsState.showEquity, controlsState.showCash, equityChartData, cashChartData]);
+    }, [controlsState.showEquity, controlsState.showCash, equityChartData, cashChartData, chartRef]);
 
     return {
         priceSeriesRef,
