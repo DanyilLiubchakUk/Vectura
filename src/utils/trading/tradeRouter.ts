@@ -1,27 +1,29 @@
 import {
-    getAutoTradeActionNeeded,
-    updateStore,
-    addAutoTradeBuyOrder,
-    addAutoTradeSellOrder,
-} from "@/auto-trade/autoTradeState";
-import {
     addBuyOrder as addBacktestBuyOrder,
     addSellOrder as addBacktestSellOrder,
     getActionNeededOrders as getBacktestActionNeeded,
     updateEquityFromMarket,
 } from "@/backtest/backtestState";
+import { PriceCollector } from "@/backtest/core/price-collector";
+import { OrderTracker } from "@/backtest/core/order-tracker";
+import type { MetricsTracker } from "@/backtest/core/metrics-tracker";
 
 export async function updateEquity(
     backtesting: boolean,
     currentPrice: number,
-    time: string
+    time: string,
+    priceCollector?: PriceCollector
 ) {
     if (backtesting) {
-        updateEquityFromMarket(currentPrice, time);
+        updateEquityFromMarket(currentPrice, time, priceCollector);
     } else {
+        const { updateStore } = await import(
+            /* webpackIgnore: true */ "@/auto-trade/autoTradeState"
+        );
         await updateStore(time);
     }
 }
+
 export async function getActionNeededOrders(
     backtesting: boolean,
     currentPrice: number,
@@ -33,9 +35,13 @@ export async function getActionNeededOrders(
     if (backtesting) {
         return getBacktestActionNeeded(currentPrice, time);
     } else {
+        const { getAutoTradeActionNeeded } = await import(
+            /* webpackIgnore: true */ "@/auto-trade/autoTradeState"
+        );
         return await getAutoTradeActionNeeded(currentPrice, time);
     }
 }
+
 export async function addBuyOrder(
     backtesting: boolean,
     buyBelowPct: number,
@@ -45,7 +51,10 @@ export async function addBuyOrder(
     time: string,
     currentPrice: number,
     buyAtId: string,
-    orderGapPct: number
+    orderGapPct: number,
+    orderTracker?: OrderTracker,
+    priceCollector?: PriceCollector,
+    metricsTracker?: MetricsTracker
 ): Promise<{
     price: number;
     shares: number;
@@ -58,9 +67,16 @@ export async function addBuyOrder(
             cashFloor,
             time,
             currentPrice,
-            buyAtId
+            buyAtId,
+            orderGapPct,
+            orderTracker,
+            priceCollector,
+            metricsTracker
         );
     } else {
+        const { addAutoTradeBuyOrder } = await import(
+            /* webpackIgnore: true */ "@/auto-trade/autoTradeState"
+        );
         return await addAutoTradeBuyOrder(
             buyBelowPct,
             sellAbovePct,
@@ -73,6 +89,7 @@ export async function addBuyOrder(
         );
     }
 }
+
 export async function addSellOrder(
     backtesting: boolean,
     buyBelowPct: number,
@@ -82,7 +99,10 @@ export async function addSellOrder(
     sellActionId: string,
     tradeId: string,
     shares: number,
-    orderGapPct: number
+    orderGapPct: number,
+    orderTracker?: OrderTracker,
+    priceCollector?: PriceCollector,
+    metricsTracker?: MetricsTracker
 ): Promise<{
     price: number;
     shares: number;
@@ -95,9 +115,16 @@ export async function addSellOrder(
             currentPrice,
             sellActionId,
             tradeId,
-            shares
+            shares,
+            orderGapPct,
+            orderTracker,
+            priceCollector,
+            metricsTracker
         );
     } else {
+        const { addAutoTradeSellOrder } = await import(
+            /* webpackIgnore: true */ "@/auto-trade/autoTradeState"
+        );
         return await addAutoTradeSellOrder(
             buyBelowPct,
             buyAfterSellPct,

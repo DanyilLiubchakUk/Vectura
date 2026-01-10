@@ -245,8 +245,32 @@ export async function deleteCachedBarsForSymbol(symbol: string): Promise<void> {
         });
         throw error;
     }
+}
 
-    console.log(`[splitManager] Deleted all cached bars for ${symbol}`);
+export async function deleteBarsOutsideRange(
+    symbol: string,
+    from: string,
+    to: string
+): Promise<void> {
+    const { error: errorBefore } = await supabase
+        .from("bt_bars_daily")
+        .delete()
+        .eq("symbol", symbol)
+        .lt("day", from);
+
+    if (errorBefore) {
+        throw errorBefore;
+    }
+
+    const { error: errorAfter } = await supabase
+        .from("bt_bars_daily")
+        .delete()
+        .eq("symbol", symbol)
+        .gt("day", to);
+
+    if (errorAfter) {
+        throw errorAfter;
+    }
 }
 
 export async function updateSplitsInDatabase(
@@ -324,4 +348,110 @@ export async function updateFirstAvailableDay(
         });
         throw error;
     }
+}
+
+export async function listAllSymbolRanges(): Promise<SymbolRange[]> {
+    const { data, error } = await supabase
+        .from("bt_symbol_ranges")
+        .select("*")
+        .order("symbol", { ascending: true });
+
+    if (error) {
+        console.error("[backtestStorage] listAllSymbolRanges error", { error });
+        throw error;
+    }
+
+    return (data || []).map((row) => ({
+        symbol: row.symbol,
+        have_from: row.have_from,
+        have_to: row.have_to,
+        first_available_day: row.first_available_day || null,
+        updated_at: row.updated_at,
+        splits: row.splits || [],
+        last_split_check: row.last_split_check || null,
+    })) as SymbolRange[];
+}
+
+export async function deleteSymbolRange(symbol: string): Promise<void> {
+    const { error } = await supabase
+        .from("bt_symbol_ranges")
+        .delete()
+        .eq("symbol", symbol);
+
+    if (error) {
+        console.error("[backtestStorage] Error deleting symbol range", {
+            symbol,
+            error,
+        });
+        throw error;
+    }
+}
+
+export async function deleteSymbolCompletely(symbol: string): Promise<void> {
+    await deleteCachedBarsForSymbol(symbol);
+    await deleteSymbolRange(symbol);
+}
+
+export async function updateSymbolRangeDates(
+    symbol: string,
+    haveFrom: string | null,
+    haveTo: string | null
+): Promise<SymbolRange | null> {
+    const { data, error } = await supabase
+        .from("bt_symbol_ranges")
+        .update({
+            have_from: haveFrom,
+            have_to: haveTo,
+        })
+        .eq("symbol", symbol)
+        .select()
+        .maybeSingle();
+
+    if (error) {
+        console.error("[backtestStorage] updateSymbolRangeDates error", {
+            symbol,
+            haveFrom,
+            haveTo,
+            error,
+        });
+        throw error;
+    }
+
+    if (!data) {
+        return null;
+    }
+
+    return {
+        symbol: data.symbol,
+        have_from: data.have_from,
+        have_to: data.have_to,
+        first_available_day: data.first_available_day || null,
+        updated_at: data.updated_at,
+        splits: data.splits || [],
+        last_split_check: data.last_split_check || null,
+    } as SymbolRange;
+}
+
+export async function checkDaysExist(
+    symbol: string,
+    days: string[]
+): Promise<Record<string, boolean>> {
+    if (days.length === 0) return {};
+
+    const { data, error } = await supabase
+        .from("bt_bars_daily")
+        .select("day")
+        .eq("symbol", symbol)
+        .in("day", days);
+
+    if (error) {
+        console.error("[backtestStorage] checkDaysExist error", {
+            symbol,
+            error,
+        });
+        return Object.fromEntries(days.map((day) => [day, false]));
+    }
+
+    const existingDays = new Set((data || []).map((row) => row.day));
+    return Object.fromEntries(days.map((day) => [day, existingDays.has(day)]));
 }

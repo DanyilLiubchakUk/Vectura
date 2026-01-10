@@ -28,9 +28,20 @@ export function applySplitAdjustments(bars: Tbar[], symbol: string): void {
 
     bars.forEach((bar) => {
         const timestamp = new Date(bar.Timestamp);
+        const barDate = new Date(Date.UTC(
+            timestamp.getUTCFullYear(),
+            timestamp.getUTCMonth(),
+            timestamp.getUTCDate()
+        ));
 
         for (const split of splits) {
-            if (timestamp < split.date) {
+            const splitDate = new Date(Date.UTC(
+                split.date.getUTCFullYear(),
+                split.date.getUTCMonth(),
+                split.date.getUTCDate()
+            ));
+
+            if (barDate < splitDate) {
                 bar.Volume *= split.ratio;
                 bar.VWAP /= split.ratio;
                 bar.HighPrice /= split.ratio;

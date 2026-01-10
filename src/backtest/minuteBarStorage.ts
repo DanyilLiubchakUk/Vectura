@@ -1,39 +1,44 @@
-import { DayBlob, MinuteBar } from "@/backtest/types";
-import {
-    loadPersistedDays,
-    updateFirstAvailableDay,
-} from "@/utils/supabase/backtestStorage";
 import {
     computeMissingRanges,
     fillMissingRanges,
     findFirstAvailableDay,
     validateDateRange,
 } from "@/backtest/storage/rangeManager";
-import { dayBlobsToMinuteBars as convertDayBlobsToMinuteBars } from "@/backtest/storage/barProcessing";
 import {
     checkAndRefreshSplits,
     cacheSplitsFromSymbolRange,
 } from "@/backtest/storage/splitManager";
+import { dayBlobsToMinuteBars as convertDayBlobsToMinuteBars } from "@/backtest/storage/barProcessing";
+import { backtestStorageAdapter } from "@/utils/backtest/execution-adapter";
+import { DayBlob, MinuteBar } from "@/backtest/types";
+import type { ProgressCallback } from "@/backtest/types";
 
 export async function ensureSymbolRange(
     symbol: string,
     reqFrom: string,
     reqTo: string,
-    streamDay?: (blob: DayBlob) => void
+    streamDay?: (blob: DayBlob) => void,
+    onProgress?: ProgressCallback
 ): Promise<DayBlob[]> {
-    console.log(
-        `Ensures that we have data for ${symbol} from ${reqFrom} to ${reqTo}`
-    );
+    // console.log(
+    //     `Ensures that we have data for ${symbol} from ${reqFrom} to ${reqTo}`
+    // );
 
-    let currentRange = await checkAndRefreshSplits(symbol);
+    let currentRange = await checkAndRefreshSplits(symbol, onProgress);
 
     if (!currentRange.first_available_day) {
         console.log(
             `[minuteBarStorage] First available day not set for ${symbol}, computing it...`
         );
-        const firstAvailableDay = await findFirstAvailableDay(symbol);
+        const firstAvailableDay = await findFirstAvailableDay(
+            symbol,
+            onProgress
+        );
         if (firstAvailableDay) {
-            await updateFirstAvailableDay(symbol, firstAvailableDay);
+            await backtestStorageAdapter.updateFirstAvailableDay(
+                symbol,
+                firstAvailableDay
+            );
             currentRange = {
                 ...currentRange,
                 first_available_day: firstAvailableDay,
@@ -59,13 +64,18 @@ export async function ensureSymbolRange(
         leftRange,
         rightRange,
         currentRange,
-        streamDay
+        streamDay,
+        onProgress
     );
     if (updatedRange) {
         currentRange = updatedRange;
     }
 
-    const persisted = await loadPersistedDays(symbol, reqFrom, reqTo);
+    const persisted = await backtestStorageAdapter.loadPersistedDays(
+        symbol,
+        reqFrom,
+        reqTo
+    );
     return persisted;
 }
 

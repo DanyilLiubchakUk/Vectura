@@ -1,72 +1,81 @@
 import {
-    backtestStore,
-    IbacktestSession,
-    IbacktestCapital,
-} from "@/utils/zustand/backtestStore";
-import { formatDay } from "@/backtest/storage/dateUtils";
-import { isTradingAllowed } from "@/backtest/pdt/pdtManager";
-import { getActionNeededOrders as getActionNeededOrdersInternal } from "@/backtest/orders/orderManager";
-import {
     executeBuyOrder,
     executeSellOrder,
     BuyOrderData,
 } from "@/backtest/trades/tradeManager";
 import {
+    backtestStore,
+    IbacktestSession,
+    IbacktestCapital,
+} from "@/utils/zustand/backtestStore";
+import {
     calculateEquity,
     roundDown,
     generateOrderId,
 } from "@/backtest/utils/helpers";
-import { GRID_TRADE_V0_DEFAULT_CONFIG } from "@/utils/trading/algorithms/gridTradeV0";
+import { getActionNeededOrders as getActionNeededOrdersInternal } from "@/backtest/orders/orderManager";
+import { isTradingAllowed } from "@/backtest/pdt/pdtManager";
+import { OrderTracker } from "@/backtest/core/order-tracker";
+import type { MetricsTracker } from "@/backtest/core/metrics-tracker";
+import type { PriceCollector } from "@/backtest/core/price-collector";
+import type { BacktestConfig } from "@/backtest/types";
 
-export function initializeBacktest(
-    stock: string,
-    backtestStart: string,
-    backtestEnd: string,
-    initialCapital: number
-): void {
-    backtestStore.setState((state) => {
+export function initializeBacktest(config: BacktestConfig): void {
+    backtestStore.setState(() => {
         const session: IbacktestSession = {
-            stock,
-            start: backtestStart,
-            end: backtestEnd,
-            initialCapital,
+            stock: config.stock,
+            start: config.startDate,
+            end: config.endDate,
+            initialCapital: config.startCapital,
         };
         const capital: IbacktestCapital = {
-            cash: initialCapital,
-            max: initialCapital,
-            equity: initialCapital,
+            cash: config.startCapital,
+            max: config.startCapital,
+            equity: config.startCapital,
             investedCash: 0,
         };
 
         return {
-            ...state,
+            config,
+            session,
+            capital,
             actions: {
-                ...state.actions,
                 toBuy: [
                     { id: "firstOrder", atPrice: -1, belowOrHigher: "higher" },
                 ],
+                toSell: [],
             },
-            session,
-            capital,
+            tradeHistory: [],
+            pdtStatus: [],
+            openTrades: [],
         };
     });
 }
 
 export function updateEquityFromMarket(
     currentPrice: number,
-    timestamp: string
+    timestamp: string,
+    priceCollector?: PriceCollector
 ): void {
+    // Get current state to calculate equity with correct values
+    const state = backtestStore.getState();
+    if (!state.capital) return;
+
+    const equity = calculateEquity(
+        state.capital.cash,
+        state.openTrades,
+        currentPrice
+    );
+
+    const currentMax = state.capital.max ?? 0;
+    const nextMax = Math.max(currentMax, equity);
+
+    if (priceCollector) {
+        priceCollector.updateAccount(timestamp, equity, state.capital.cash);
+    }
+
     backtestStore.setState((state) => {
         if (!state.capital) return state;
-
-        const equity = calculateEquity(
-            state.capital.cash,
-            state.openTrades,
-            currentPrice
-        );
-
-        const currentMax = state.capital.max ?? 0;
-        const nextMax = Math.max(currentMax, equity);
 
         if (equity > currentMax) {
             const initialCapital = state.session?.initialCapital ?? 1;
@@ -79,13 +88,13 @@ export function updateEquityFromMarket(
             const percentMinusInvested =
                 (nextMax / (initialCapital + investedCash) - 1) * 100;
 
-            console.log(
-                `${percentMinusInvested.toFixed(
-                    2
-                )}% witout ${investedCash}$ invested, and ${gainPct}% with invested - New maximum capital: ${equity.toFixed(
-                    2
-                )} on ${formatDay(new Date(timestamp))}`
-            );
+            // console.log(
+            //     `${percentMinusInvested.toFixed(
+            //         2
+            //     )}% witout ${investedCash}$ invested, and ${gainPct}% with invested - New maximum capital: ${equity.toFixed(
+            //         2
+            //     )} on ${formatDay(new Date(timestamp))}`
+            // );
         }
 
         return {
@@ -106,7 +115,11 @@ export function addBuyOrder(
     cashFloor: number,
     timestamp: string,
     price: number,
-    buyAtId: string
+    buyAtId: string,
+    orderGapPct: number,
+    orderTracker?: OrderTracker,
+    priceCollector?: PriceCollector,
+    metricsTracker?: MetricsTracker
 ): void {
     if (!isTradingAllowed(timestamp, "buy")) {
         return;
@@ -134,10 +147,20 @@ export function addBuyOrder(
         toSell,
         price,
         buyAtId,
-        orderGapPct: GRID_TRADE_V0_DEFAULT_CONFIG.orderGapPct,
+        orderGapPct,
     };
 
-    executeBuyOrder(orderData);
+    // Force collect price, equity, and cash at order execution time
+    if (priceCollector) {
+        const equity = calculateEquity(
+            cash,
+            state.openTrades,
+            price
+        );
+        priceCollector.forceCollectPrice(timestamp, price, equity, cash);
+    }
+
+    executeBuyOrder(orderData, orderTracker, priceCollector, metricsTracker);
     setCapital(cash);
 }
 
@@ -148,7 +171,11 @@ export function addSellOrder(
     price: number,
     sellActionId: string,
     tradeId: string,
-    shares: number
+    shares: number,
+    orderGapPct: number,
+    orderTracker?: OrderTracker,
+    priceCollector?: PriceCollector,
+    metricsTracker?: MetricsTracker
 ): void {
     if (!isTradingAllowed(timestamp, "sell", tradeId)) {
         return;
@@ -162,6 +189,16 @@ export function addSellOrder(
     const downPrice = price * (1 - buyBelowPct / 100);
     const upPrice = price * (1 + buyAfterSellPct / 100);
 
+    // Force collect price, equity, and cash at order execution time
+    if (priceCollector) {
+        const equity = calculateEquity(
+            cash,
+            state.openTrades,
+            price
+        );
+        priceCollector.forceCollectPrice(timestamp, price, equity, cash);
+    }
+
     executeSellOrder(
         generateOrderId(),
         shares,
@@ -170,7 +207,10 @@ export function addSellOrder(
         [downPrice, upPrice],
         sellActionId,
         tradeId,
-        GRID_TRADE_V0_DEFAULT_CONFIG.orderGapPct
+        orderGapPct,
+        orderTracker,
+        priceCollector,
+        metricsTracker
     );
     setCapital(cash);
 }

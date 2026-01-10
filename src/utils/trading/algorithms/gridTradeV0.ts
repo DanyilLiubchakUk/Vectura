@@ -4,31 +4,36 @@ import {
     addBuyOrder,
     addSellOrder,
 } from "@/utils/trading/tradeRouter";
-import { getAlgoConfigOrDefault } from "@/utils/supabase/autoTradeStorage";
-
-export const GRID_TRADE_V0_DEFAULT_CONFIG = {
-    capitalPct: 60, // Percentage of capital to use per buy (N %)
-    buyBelowPct: 2, // Percentage below current price to set NextBuyOn (N %)
-    sellAbovePct: 18, // Percentage above buy price to set SellOn (N %)
-    buyAfterSellPct: 25, // Percentage higher to buy more after each sell (N %)
-    cashFloor: 200, // Dollar amount cash floor
-    orderGapPct: 1.5, // Percent gap to join orders (N %), use -1 to disable filtering
-} as const;
+import {
+    GRID_TRADE_V0_DEFAULT_CONFIG,
+    IgridV0,
+} from "@/utils/trading/algorithms/constants";
+import { PriceCollector } from "@/backtest/core/price-collector";
+import { OrderTracker } from "@/backtest/core/order-tracker";
+import type { MetricsTracker } from "@/backtest/core/metrics-tracker";
 
 export default async function gridTradeV0(
     stock: string,
     backtesting: boolean = false,
     currentPrice: number,
-    time: string
+    time: string,
+    configOverrides?: IgridV0,
+    orderTracker?: OrderTracker,
+    priceCollector?: PriceCollector,
+    metricsTracker?: MetricsTracker
 ): Promise<string> {
     let summaryMessage =
         "This time waited for changes in the market for a better trade";
     const actionsSummary: string[] = [];
-    await updateEquity(backtesting, currentPrice, time);
+    await updateEquity(backtesting, currentPrice, time, priceCollector);
 
     const config = backtesting
-        ? GRID_TRADE_V0_DEFAULT_CONFIG
-        : await getAlgoConfigOrDefault();
+        ? { ...GRID_TRADE_V0_DEFAULT_CONFIG, ...configOverrides }
+        : await (
+            await import(
+                  /* webpackIgnore: true */ "@/utils/supabase/autoTradeStorage"
+            )
+        ).getAlgoConfigOrDefault();
 
     const { toBuyOrders, toSellOrders } = await getActionNeededOrders(
         backtesting,
@@ -46,7 +51,10 @@ export default async function gridTradeV0(
             time,
             currentPrice,
             buyOrder.id,
-            config.orderGapPct
+            config.orderGapPct,
+            orderTracker,
+            priceCollector,
+            metricsTracker
         );
 
         if (!backtesting && result) {
@@ -56,7 +64,7 @@ export default async function gridTradeV0(
         }
 
         if (!backtesting) {
-            await updateEquity(backtesting, currentPrice, time);
+            await updateEquity(backtesting, currentPrice, time, priceCollector);
         }
     }
 
@@ -70,7 +78,10 @@ export default async function gridTradeV0(
             sellOrder.id,
             sellOrder.tradeId,
             sellOrder.shares,
-            config.orderGapPct
+            config.orderGapPct,
+            orderTracker,
+            priceCollector,
+            metricsTracker
         );
 
         if (!backtesting && result) {
@@ -80,7 +91,7 @@ export default async function gridTradeV0(
         }
 
         if (!backtesting) {
-            await updateEquity(backtesting, currentPrice, time);
+            await updateEquity(backtesting, currentPrice, time, priceCollector);
         }
     }
 

@@ -16,7 +16,7 @@ import {
     TRADING_ALGORITHM,
     UPDATE_AFTER_NEW_SPLIT_BATCH_SIZE,
 } from "@/auto-trade/constants";
-import { GRID_TRADE_V0_DEFAULT_CONFIG } from "@/utils/trading/algorithms/gridTradeV0";
+import { GRID_TRADE_V0_DEFAULT_CONFIG } from "@/utils/trading/algorithms/constants";
 import { supabase } from "@/utils/supabase/supabaseClient";
 import { fetchSplitsFromAlphaVantage } from "@/utils/alphavantage/splits";
 

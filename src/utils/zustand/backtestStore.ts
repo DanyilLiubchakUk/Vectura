@@ -1,4 +1,5 @@
 import { createStore } from "zustand/vanilla";
+import type { BacktestConfig } from "@/backtest/types";
 
 export interface IbacktestSession {
     stock: string;
@@ -45,6 +46,7 @@ export interface IsellAction extends IorderAction {
 }
 
 export interface IbacktestStorage {
+    config: BacktestConfig | null;
     session: IbacktestSession | null;
     capital: IbacktestCapital | null;
     actions: IbacktestActions;
@@ -54,6 +56,7 @@ export interface IbacktestStorage {
 }
 
 export const backtestStore = createStore<IbacktestStorage>(() => ({
+    config: null,
     session: null,
     capital: null,
     actions: {

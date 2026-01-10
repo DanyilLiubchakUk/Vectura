@@ -16,15 +16,54 @@ Vectura is an open-source project to build a fully automated stock trading syste
 -   **State management (Zustand)**: In-memory state management for backtesting and web.
 -   **Broker (Alpaca)**: Trading API for orders and market data.
 
-## Planned capabilities
+## Backtesting
 
--   **Dashboard UI**: Build out the Next.js frontend to display:
-    -   Portfolio overview
-    -   Trade history and analytics
-    -   Real-time performance metrics
-    -   Algorithm configuration interface
-    -   Backtest results visualization
--   **Cloud backtesting**: AWS-based distributed backtesting for large-scale historical analysis
+Vectura includes a comprehensive backtesting system with two execution modes:
+
+### Local Mode
+
+-   Runs on your local machine via Server-Sent Events (SSE)
+-   Streams progress updates in real-time
+-   Suitable for quick backtests and development
+-   No cloud costs - uses your local resources
+-   Supports running multiple backtests in parallel
+
+### Cloud Mode (AWS Lambda)
+
+-   Runs on AWS Lambda via WebSocket API Gateway
+-   Handles long-running backtests (up to 15 minutes)
+-   Real-time progress streaming
+-   Free tier eligible (1M requests/month, 400K GB-seconds/month)
+-   Supports running multiple backtests in parallel
+
+### Quick AWS Setup
+
+For detailed AWS Lambda setup instructions, see [docs/aws-lambda-backtest-setup.md](docs/aws-lambda-backtest-setup.md).
+
+**Quick steps:**
+
+1. Create IAM role with Lambda execution and API Gateway permissions
+2. Create Lambda function (`backtest-handler`) with Node.js 20.x runtime
+3. Create API Gateway WebSocket API with routes: `$connect`, `$disconnect`, `$default`
+4. Set environment variables in Lambda (Supabase, Alpaca, AlphaVantage keys)
+5. Set `NEXT_PUBLIC_WS_URL` in your `.env.local` to the WebSocket URL
+6. Build and deploy: `npm run deploy:lambda`
+7. Upload `backtest-lambda.zip` to Lambda
+
+**Environment Variables for Cloud Mode:**
+
+```env
+NEXT_PUBLIC_WS_URL=wss://YOUR_API_ID.execute-api.us-east-1.amazonaws.com/prod
+```
+
+## Documentation
+
+Vectura includes comprehensive documentation pages accessible from the web interface:
+
+-   **How the Backtest Works** (`/how-backtest-works`): Learn how to configure parameters, choose execution modes, understand the algorithm, and interpret results. Everything you need to know about using and understanding the backtest.
+-   **Development Journey** (`/development-journey`): Read about the development process: from CSV files to Zustand, finding free APIs, implementing PDT rules, and optimizing performance from 7 hours to fast execution.
+
+These pages can be accessed from the homepage or directly via their routes.
 
 ## Getting started
 
@@ -53,6 +92,103 @@ Vectura is an open-source project to build a fully automated stock trading syste
 4. Run the development server: `npm run dev`
 
 5. Deploy Trigger.dev workflows: `npx trigger.dev@latest deploy` (select to update versions if prompted)
+
+### Managing Stock Ranges
+
+The `/ranges` page allows you to manage historical stock data ranges stored in the database. Stock ranges are automatically created when you run backtests, and you can manage them through this interface.
+
+**Features:**
+
+-   **View all ranges**: See all stocks with stored historical data, including their date ranges
+-   **Delete ranges**: Remove all stored data for a specific stock symbol
+-   **Adjust range size**: Make ranges bigger or smaller by changing the start and end dates
+-   **Move ranges**: Shift the entire date range to a different time period
+-   **Smart suggestions**: When a selected date is a closed market day, the system suggests the nearest open trading days
+
+**How to use:**
+
+1. Navigate to `/ranges` page
+2. Each stock symbol is displayed as a card showing:
+    - Current stored date range
+    - Interactive slider to adjust the range
+    - Date input fields for precise date selection
+3. Adjust the range using:
+    - **Slider**: Drag the handles to change start/end dates
+    - **Date inputs**: Type or select specific dates
+4. The system validates dates in real-time:
+    - Checks if dates are market trading days
+    - Suggests nearest open days if a closed day is selected
+5. Click "Update Range" to save changes:
+    - Missing data will be automatically downloaded
+    - Progress is shown in real-time
+    - Data outside the new range is automatically deleted
+
+**Note**: Ranges are automatically created when you run backtests. If no ranges exist, run a backtest first to create them.
+
+### Running Backtests
+
+**Via Web UI:**
+
+1. Navigate to `/backtest` page
+2. Select execution mode: **Local** (runs on your machine) or **Cloud** (AWS Lambda)
+3. Fill in backtest parameters (stock, algorithm, date range, capital)
+4. Click "Run Backtest" and watch real-time progress
+5. You can run multiple backtests in parallel - each will execute independently in either mode
+
+**Via CLI:**
+
+```bash
+npm run backtest
+# Follow prompts or provide arguments(optional):
+# npm run backtest TQQQ GridV0 2024-01-01 2024-12-31 1000 7 500
+```
+
+**Cloud Mode Setup:**
+
+-   Requires AWS Lambda and API Gateway setup (see [AWS Setup Guide](docs/aws-lambda-backtest-setup.md))
+-   Set `NEXT_PUBLIC_WS_URL` in `.env.local` to your WebSocket API endpoint
+
+### Backtest Results
+
+After running a backtest, you'll see comprehensive results with visualizations and detailed metrics:
+
+#### Interactive Chart
+
+The backtest results include an interactive chart powered by TradingView Lightweight Charts that displays:
+
+-   **Price Data**: Historical stock price over the backtest period
+-   **Equity Curve**: Shows how your total account equity changed over time
+-   **Cash Balance**: Displays the cash balance throughout the backtest
+-   **Execution Lines**: Visual markers showing when buy and sell orders were placed and executed
+-   **Fullscreen Mode**: Click to expand the chart for detailed analysis
+-   **Chart Controls**: Toggle visibility of different data series (price, equity, cash, executions)
+
+#### Result Metrics
+
+The results display includes comprehensive performance and risk metrics:
+
+**Performance Metrics:**
+
+-   **Total Return**: Absolute dollar return and percentage return over the backtest period
+-   **Buy & Hold Comparison**: Comparison showing the difference between your strategy and buying and holding with the same contributions (both dollar and percentage)
+-   **Final Equity**: Total account equity at the end of the backtest
+-   **Maximum Equity**: Highest total account equity reached at any point during the backtest
+-   **Invested Cash**: Initial capital plus all additional cash invested over time
+
+**Risk Metrics:**
+
+-   **Max Drawdown**: Largest loss from a historical equity peak to a subsequent trough (shown in both dollars and percentage)
+-   **Best/Worst Month**: The percentage return achieved in the best and worst single calendar months
+-   **Longest Drawdown Duration**: The longest period of drawdown in days
+-   **Return/Max Drawdown Ratio**: A risk-adjusted performance metric
+
+**Trading Activity:**
+
+-   **Total Trades**: Total number of completed buy and sell executions during the backtest
+-   **Avg Trades/Month**: Average number of executed trades per month over the backtest period
+-   **Average Invested Capital %**: The average percentage of total capital that was invested over the backtest period
+
+All metrics include tooltips with detailed descriptions to help you understand what each metric represents and how it's calculated.
 
 ### Database setup
 
