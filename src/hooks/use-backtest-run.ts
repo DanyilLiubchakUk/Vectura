@@ -182,6 +182,94 @@ export function useBacktestRun(runId: string) {
             let receivedCashDataChunks = 0;
             let receivedExecutionsChunks = 0;
 
+            const emitChunkProgress = () => {
+                const currentRun = store.getRun(runId);
+                if (!currentRun || currentRun.status !== "running") {
+                    return;
+                }
+
+                // Calculate progress for each data type that has expected chunks
+                const progressData: Array<{ received: number; expected: number }> = [];
+
+                if (expectedPriceDataChunks > 0) {
+                    progressData.push({
+                        received: receivedPriceDataChunks,
+                        expected: expectedPriceDataChunks,
+                    });
+                }
+                if (expectedEquityDataChunks > 0) {
+                    progressData.push({
+                        received: receivedEquityDataChunks,
+                        expected: expectedEquityDataChunks,
+                    });
+                }
+                if (expectedCashDataChunks > 0) {
+                    progressData.push({
+                        received: receivedCashDataChunks,
+                        expected: expectedCashDataChunks,
+                    });
+                }
+                if (expectedExecutionsChunks > 0) {
+                    progressData.push({
+                        received: receivedExecutionsChunks,
+                        expected: expectedExecutionsChunks,
+                    });
+                }
+
+                // Calculate weighted average progress based on expected chunks per data type
+                let totalWeightedProgress = 0;
+                let totalWeight = 0;
+                let totalExpectedChunks = 0;
+                let totalReceivedChunks = 0;
+
+                for (const { received, expected } of progressData) {
+                    if (expected > 0) {
+                        const typeProgress = Math.min(100, (received / expected) * 100);
+                        totalWeightedProgress += typeProgress * expected;
+                        totalWeight += expected;
+                        totalExpectedChunks += expected;
+                        totalReceivedChunks += received;
+                    }
+                }
+
+                // Only show progress if we have data types with expected chunks
+                if (progressData.length > 0 && totalWeight > 0) {
+                    const progress = Math.min(
+                        100,
+                        Math.round(totalWeightedProgress / totalWeight)
+                    );
+
+                    const progressEvent: BacktestProgressEvent = {
+                        stage: "accumulating_chunks",
+                        message: `Handling your data...`,
+                        data: {
+                            progress,
+                            receivedChunks: totalReceivedChunks,
+                            totalChunks: totalExpectedChunks,
+                            priceDataChunks: {
+                                received: receivedPriceDataChunks,
+                                expected: expectedPriceDataChunks,
+                            },
+                            equityDataChunks: {
+                                received: receivedEquityDataChunks,
+                                expected: expectedEquityDataChunks,
+                            },
+                            cashDataChunks: {
+                                received: receivedCashDataChunks,
+                                expected: expectedCashDataChunks,
+                            },
+                            executionsChunks: {
+                                received: receivedExecutionsChunks,
+                                expected: expectedExecutionsChunks,
+                            },
+                        },
+                        timestamp: new Date().toISOString(),
+                    };
+
+                    store.updateRun(runId, { progress: progressEvent });
+                }
+            };
+
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
@@ -206,6 +294,17 @@ export function useBacktestRun(runId: string) {
                             ws.close();
                             store.updateRun(runId, { wsRef: null });
                             resolve();
+                        } else {
+                            // Chart data will be chunked, show "Calculating metrics" stage
+                            const progressEvent: BacktestProgressEvent = {
+                                stage: "calculating_metrics",
+                                message: "Calculating metrics and preparing data...",
+                                data: {
+                                    progress: 0,
+                                },
+                                timestamp: new Date().toISOString(),
+                            };
+                            store.updateRun(runId, { progress: progressEvent });
                         }
                     } else if (data.type === "result_chunk") {
                         // Accumulate chart data chunks
@@ -214,27 +313,94 @@ export function useBacktestRun(runId: string) {
                         const totalChunks = data.totalChunks as number;
 
                         if (dataType === "priceData") {
-                            expectedPriceDataChunks = totalChunks;
-                            priceDataChunks[chunkIndex] = data.chartData.priceData;
-                            receivedPriceDataChunks++;
+                            if (expectedPriceDataChunks === 0 && typeof totalChunks === "number" && totalChunks > 0) {
+                                expectedPriceDataChunks = totalChunks;
+                            }
+                            if (
+                                typeof chunkIndex === "number" &&
+                                chunkIndex >= 0 &&
+                                (expectedPriceDataChunks === 0 || chunkIndex < expectedPriceDataChunks) &&
+                                data.chartData?.priceData &&
+                                !priceDataChunks[chunkIndex]
+                            ) {
+                                priceDataChunks[chunkIndex] = data.chartData.priceData;
+                                receivedPriceDataChunks++;
+                            }
                         } else if (dataType === "equityData") {
-                            expectedEquityDataChunks = totalChunks;
-                            equityDataChunks[chunkIndex] = data.chartData.equityData;
-                            receivedEquityDataChunks++;
+                            if (expectedEquityDataChunks === 0 && typeof totalChunks === "number" && totalChunks > 0) {
+                                expectedEquityDataChunks = totalChunks;
+                            }
+                            if (
+                                typeof chunkIndex === "number" &&
+                                chunkIndex >= 0 &&
+                                (expectedEquityDataChunks === 0 || chunkIndex < expectedEquityDataChunks) &&
+                                data.chartData?.equityData &&
+                                !equityDataChunks[chunkIndex]
+                            ) {
+                                equityDataChunks[chunkIndex] = data.chartData.equityData;
+                                receivedEquityDataChunks++;
+                            }
                         } else if (dataType === "cashData") {
-                            expectedCashDataChunks = totalChunks;
-                            cashDataChunks[chunkIndex] = data.chartData.cashData;
-                            receivedCashDataChunks++;
+                            if (expectedCashDataChunks === 0 && typeof totalChunks === "number" && totalChunks > 0) {
+                                expectedCashDataChunks = totalChunks;
+                            }
+                            if (
+                                typeof chunkIndex === "number" &&
+                                chunkIndex >= 0 &&
+                                (expectedCashDataChunks === 0 || chunkIndex < expectedCashDataChunks) &&
+                                data.chartData?.cashData &&
+                                !cashDataChunks[chunkIndex]
+                            ) {
+                                cashDataChunks[chunkIndex] = data.chartData.cashData;
+                                receivedCashDataChunks++;
+                            }
                         } else if (dataType === "executions") {
-                            expectedExecutionsChunks = totalChunks;
-                            executionsChunks[chunkIndex] = data.chartData.executions;
-                            receivedExecutionsChunks++;
+                            if (expectedExecutionsChunks === 0 && typeof totalChunks === "number" && totalChunks > 0) {
+                                expectedExecutionsChunks = totalChunks;
+                            }
+                            if (
+                                typeof chunkIndex === "number" &&
+                                chunkIndex >= 0 &&
+                                (expectedExecutionsChunks === 0 || chunkIndex < expectedExecutionsChunks) &&
+                                data.chartData?.executions &&
+                                !executionsChunks[chunkIndex]
+                            ) {
+                                executionsChunks[chunkIndex] = data.chartData.executions;
+                                receivedExecutionsChunks++;
+                            }
                         }
+
+                        // Emit progress after processing each chunk
+                        emitChunkProgress();
                     } else if (data.type === "result_complete") {
-                        const allPriceDataChunksReceived = receivedPriceDataChunks === expectedPriceDataChunks || expectedPriceDataChunks === 0;
-                        const allEquityDataChunksReceived = receivedEquityDataChunks === expectedEquityDataChunks || expectedEquityDataChunks === 0 || receivedEquityDataChunks === 0;
-                        const allCashDataChunksReceived = receivedCashDataChunks === expectedCashDataChunks || expectedCashDataChunks === 0 || receivedCashDataChunks === 0;
-                        const allExecutionsChunksReceived = receivedExecutionsChunks === expectedExecutionsChunks || expectedExecutionsChunks === 0;
+                        // Safe checks for chunk completeness
+                        const allPriceDataChunksReceived =
+                            (expectedPriceDataChunks > 0 && receivedPriceDataChunks === expectedPriceDataChunks) ||
+                            expectedPriceDataChunks === 0;
+                        const allEquityDataChunksReceived =
+                            (expectedEquityDataChunks > 0 && receivedEquityDataChunks === expectedEquityDataChunks) ||
+                            expectedEquityDataChunks === 0 ||
+                            receivedEquityDataChunks === 0;
+                        const allCashDataChunksReceived =
+                            (expectedCashDataChunks > 0 && receivedCashDataChunks === expectedCashDataChunks) ||
+                            expectedCashDataChunks === 0 ||
+                            receivedCashDataChunks === 0;
+                        const allExecutionsChunksReceived =
+                            (expectedExecutionsChunks > 0 && receivedExecutionsChunks === expectedExecutionsChunks) ||
+                            expectedExecutionsChunks === 0;
+
+                        // Emit final progress before completion
+                        if (baseResult) {
+                            const finalProgressEvent: BacktestProgressEvent = {
+                                stage: "accumulating_chunks",
+                                message: "Finalizing data...",
+                                data: {
+                                    progress: 100,
+                                },
+                                timestamp: new Date().toISOString(),
+                            };
+                            store.updateRun(runId, { progress: finalProgressEvent });
+                        }
 
                         if (baseResult && allPriceDataChunksReceived && allEquityDataChunksReceived && allCashDataChunksReceived && allExecutionsChunksReceived) {
                             const priceData = priceDataChunks.flat();

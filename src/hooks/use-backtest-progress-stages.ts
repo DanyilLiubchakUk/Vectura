@@ -14,6 +14,8 @@ const stageLabels: Record<string, string> = {
     downloading_before_range: "Downloading stock data (before range)",
     downloading_after_range: "Downloading stock data (after range)",
     working_on_chunk: "Processing chunk",
+    calculating_metrics: "Calculating metrics",
+    accumulating_chunks: "Accumulating chart data",
 };
 
 export function useBacktestProgressStages(
@@ -98,6 +100,30 @@ export function useBacktestProgressStages(
                         isActive: true,
                         progress: progressPercent,
                         message: progress.message || "Processing...",
+                    });
+                    break;
+                }
+                case "calculating_metrics": {
+                    const progressPercent = progress.data?.progress ?? 0;
+
+                    newMap.set("calculating_metrics", {
+                        id: "calculating_metrics",
+                        label: stageLabels.calculating_metrics,
+                        isActive: true,
+                        progress: progressPercent,
+                        message: progress.message || "Calculating metrics and preparing data...",
+                    });
+                    break;
+                }
+                case "accumulating_chunks": {
+                    const progressPercent = progress.data?.progress ?? 0;
+
+                    newMap.set("accumulating_chunks", {
+                        id: "accumulating_chunks",
+                        label: stageLabels.accumulating_chunks,
+                        isActive: true,
+                        progress: progressPercent,
+                        message: progress.message || "Handling your data...",
                     });
                     break;
                 }

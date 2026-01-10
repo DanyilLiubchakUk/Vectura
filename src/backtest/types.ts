@@ -43,6 +43,8 @@ export type BacktestProgressStage =
     | "downloading_before_range"
     | "downloading_after_range"
     | "working_on_chunk"
+    | "calculating_metrics"
+    | "accumulating_chunks"
     | "completed";
 
 export interface BacktestProgressEvent {
