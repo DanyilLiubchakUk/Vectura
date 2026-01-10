@@ -21,21 +21,32 @@ export function nextDay(day: string): string {
 }
 
 export function isEarlierDay(a: string, b: string): boolean {
-    return new Date(a) < new Date(b);
+    const dateA = new Date(a + "T00:00:00Z").getTime();
+    const dateB = new Date(b + "T00:00:00Z").getTime();
+    return dateA < dateB;
 }
 
 export function isLaterDay(a: string, b: string): boolean {
-    return new Date(a) > new Date(b);
+    const dateA = new Date(a + "T00:00:00Z").getTime();
+    const dateB = new Date(b + "T00:00:00Z").getTime();
+    return dateA > dateB;
 }
 
 export function getTodayMinusDays(days: number): string {
-    const date = new Date();
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();
+    const day = now.getUTCDate();
+
+    const date = new Date(Date.UTC(year, month, day));
     date.setUTCDate(date.getUTCDate() - days);
     return formatDay(date);
 }
 
 export function isDayBeforeOrEqual(a: string, b: string): boolean {
-    return new Date(a) <= new Date(b);
+    const dateA = new Date(a + "T00:00:00Z").getTime();
+    const dateB = new Date(b + "T00:00:00Z").getTime();
+    return dateA <= dateB;
 }
 
 export function addMonths(day: string, months: number): string {
@@ -49,12 +60,18 @@ export function calculateDaysBetween(
     inclusive = false,
     clampToZero = false
 ): number {
-    const start = startTimestamp.includes("T")
-        ? new Date(startTimestamp).getTime()
-        : new Date(startTimestamp + "T00:00:00Z").getTime();
-    const end = endTimestamp.includes("T")
-        ? new Date(endTimestamp).getTime()
-        : new Date(endTimestamp + "T00:00:00Z").getTime();
+    const parseAsUTC = (timestamp: string): number => {
+        if (timestamp.includes("T")) {
+            if (timestamp.endsWith("Z") || /[+-]\d{2}:?\d{2}$/.test(timestamp)) {
+                return new Date(timestamp).getTime();
+            }
+            return new Date(timestamp + "Z").getTime();
+        }
+        return new Date(timestamp + "T00:00:00Z").getTime();
+    };
+
+    const start = parseAsUTC(startTimestamp);
+    const end = parseAsUTC(endTimestamp);
 
     const diffMs = end - start;
     const clampedDiff = clampToZero ? Math.max(0, diffMs) : diffMs;
@@ -67,14 +84,22 @@ export function calculateTimeBoundaries(
     endDate: string,
     backtestTime?: string
 ): TimeBoundaries {
-    const startBoundary = new Date(startDate);
+    const startBoundary = new Date(startDate + "T00:00:00Z");
     startBoundary.setUTCHours(14, 30, 0, 0);
-    const endBoundary = new Date(endDate);
+    const endBoundary = new Date(endDate + "T00:00:00Z");
     endBoundary.setUTCHours(21, 0, 0, 0);
     const startBoundaryIso = startBoundary.toISOString();
     const endBoundaryIso = endBoundary.toISOString();
     const desiredStart = backtestTime
-        ? new Date(backtestTime).toISOString()
+        ? (() => {
+            if (backtestTime.includes("T")) {
+                if (backtestTime.endsWith("Z") || /[+-]\d{2}:?\d{2}$/.test(backtestTime)) {
+                    return new Date(backtestTime).toISOString();
+                }
+                return new Date(backtestTime + "Z").toISOString();
+            }
+            return new Date(backtestTime + "T00:00:00Z").toISOString();
+        })()
         : startBoundaryIso;
 
     return {

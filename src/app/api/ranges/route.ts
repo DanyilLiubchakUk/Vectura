@@ -83,11 +83,30 @@ export async function POST(request: NextRequest) {
                     return createBadRequestResponse("Missing symbol or day");
                 }
 
-                const { isMarketTradingDay } = await import(
-                    "@/utils/date-validation"
-                );
-                const isOpen = await isMarketTradingDay(symbol, day);
-                return createSuccessResponse(isOpen);
+                try {
+                    const { isMarketTradingDay } = await import(
+                        "@/utils/date-validation"
+                    );
+                    const isOpen = await isMarketTradingDay(symbol, day);
+                    return createSuccessResponse(isOpen);
+                } catch (error: any) {
+                    if (error?.code === 401 || error?.status === 401) {
+                        return NextResponse.json(
+                            {
+                                error: "Authentication error: Unable to check market day. Please verify API credentials.",
+                                errorCode: 401,
+                            },
+                            { status: 500 }
+                        );
+                    }
+                    return NextResponse.json(
+                        {
+                            error: "Error checking market day. Please try again.",
+                            errorCode: error?.code || error?.status || 500,
+                        },
+                        { status: 500 }
+                    );
+                }
             }
 
             case "updateRange": {

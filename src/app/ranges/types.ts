@@ -24,6 +24,6 @@ export interface ValidationResult {
 }
 
 export interface ValidationCacheEntry {
-    isOpen: boolean;
+    isOpen?: boolean;
     nearest?: { previous: string | null; next: string | null };
 }

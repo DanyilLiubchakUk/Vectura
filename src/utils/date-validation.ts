@@ -18,7 +18,10 @@ export async function isMarketTradingDay(
         );
         const blob = await serverAdapter.fetchDayBars(symbol, day);
         return blob !== null;
-    } catch (error) {
+    } catch (error: any) {
+        if (error?.code === 401 || error?.status === 401) {
+            throw error;
+        }
         return false;
     }
 }

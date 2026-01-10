@@ -1,4 +1,5 @@
-import { formatDay } from "@/backtest/storage/dateUtils";
+import { getTodayMinusDays } from "@/backtest/storage/dateUtils";
+import { DAYS_BEFORE_TODAY } from "@/backtest/constants";
 import { API_BASE } from "@/app/ranges/constants";
 import { useRef, useCallback } from "react";
 import type {
@@ -28,9 +29,7 @@ export function useDateValidation() {
                     return { valid: false, message: "Range not found" };
                 }
 
-                const today = new Date();
-                today.setUTCDate(today.getUTCDate() - 10);
-                const maxDate = formatDay(today);
+                const maxDate = getTodayMinusDays(DAYS_BEFORE_TODAY);
 
                 if (end > maxDate) {
                     return {
@@ -84,47 +83,90 @@ export function useDateValidation() {
                                 symbol,
                                 day,
                             }),
-                        }).then(async (res) => {
-                            const result = await res.json();
-                            return { day, isOpen: result.data === true };
                         })
+                            .then(async (res) => {
+                                if (!res.ok) {
+                                    return { day, isOpen: undefined, error: true };
+                                }
+                                const result = await res.json();
+
+                                if (result.error) {
+                                    return { day, isOpen: undefined, error: true };
+                                }
+                                return { day, isOpen: result.data === true, error: false };
+                            })
+                            .catch(() => {
+                                return { day, isOpen: undefined, error: true };
+                            })
                     );
 
                     const checkResults = await Promise.all(checkPromises);
 
-                    checkResults.forEach(({ day, isOpen }) => {
-                        if (!validationCache.current[symbol][day]) {
-                            validationCache.current[symbol][day] = { isOpen };
+                    checkResults.forEach(({ day, isOpen, error }) => {
+                        if (!error && isOpen !== undefined) {
+                            if (!validationCache.current[symbol][day]) {
+                                validationCache.current[symbol][day] = { isOpen };
+                            } else {
+                                validationCache.current[symbol][day].isOpen = isOpen;
+                            }
                         } else {
-                            validationCache.current[symbol][day].isOpen =
-                                isOpen;
+                            if (validationCache.current[symbol][day]) {
+                                validationCache.current[symbol][day].isOpen = undefined;
+                                if (
+                                    validationCache.current[symbol][day].nearest &&
+                                    validationCache.current[symbol][day].nearest
+                                        .previous === null &&
+                                    validationCache.current[symbol][day].nearest
+                                        .next === null
+                                ) {
+                                    validationCache.current[symbol][day].nearest = undefined;
+                                }
+                            }
                         }
                     });
 
-                    checkResults.forEach(({ day, isOpen }) => {
-                        if (day === start) isStartOpen = isOpen;
-                        if (day === end) isEndOpen = isOpen;
+                    checkResults.forEach(({ day, isOpen, error }) => {
+                        if (!error && isOpen !== undefined) {
+                            if (day === start) isStartOpen = isOpen;
+                            if (day === end) isEndOpen = isOpen;
+                        }
                     });
                 }
 
-                if (!isStartOpen || !isEndOpen) {
+                if (isStartOpen === undefined || isEndOpen === undefined) {
+                    return {
+                        valid: false,
+                        message: "Unable to validate dates due to API error. Please try again or check if dates are within the existing range.",
+                        startSuggestions: { previous: null, next: null },
+                        endSuggestions: { previous: null, next: null },
+                    };
+                }
+
+                if (isStartOpen === false || isEndOpen === false) {
                     const invalidDays: string[] = [];
-                    if (!isStartOpen) invalidDays.push(start);
-                    if (!isEndOpen) invalidDays.push(end);
+                    if (isStartOpen === false) invalidDays.push(start);
+                    if (isEndOpen === false) invalidDays.push(end);
 
                     const daysToFetch: string[] = [];
                     invalidDays.forEach((day) => {
-                        if (!validationCache.current[symbol][day]?.nearest) {
+                        const cached = validationCache.current[symbol][day];
+                        if (
+                            !cached?.nearest ||
+                            (cached.nearest.previous === null &&
+                                cached.nearest.next === null)
+                        ) {
                             daysToFetch.push(day);
                         }
                     });
 
-                    let nearestForStart = !isStartOpen
-                        ? validationCache.current[symbol][start]?.nearest
-                        : null;
-                    let nearestForEnd = !isEndOpen
-                        ? validationCache.current[symbol][end]?.nearest
-                        : null;
+                    let nearestForStart =
+                        isStartOpen === false
+                            ? validationCache.current[symbol][start]?.nearest
+                            : null;
+                    let nearestForEnd =
+                        isEndOpen === false
+                            ? validationCache.current[symbol][end]?.nearest
+                            : null;
 
                     if (daysToFetch.length > 0) {
                         const nearestPromises = daysToFetch.map((day) => {
@@ -136,31 +178,44 @@ export function useDateValidation() {
                                     symbol,
                                     day,
                                 }),
-                            }).then(async (res) => {
-                                const json = await res.json();
-                                return { day, nearest: json.data };
-                            });
+                            })
+                                .then(async (res) => {
+                                    if (!res.ok) {
+                                        return { day, nearest: null, error: true };
+                                    }
+                                    const json = await res.json();
+                                    if (json.error) {
+                                        return { day, nearest: null, error: true };
+                                    }
+                                    return { day, nearest: json.data, error: false };
+                                })
+                                .catch(() => {
+                                    return { day, nearest: null, error: true };
+                                });
                         });
 
                         const nearestResults = await Promise.all(
                             nearestPromises
                         );
 
-                        nearestResults.forEach(({ day, nearest }) => {
-                            if (!validationCache.current[symbol][day]) {
-                                validationCache.current[symbol][day] = {
-                                    isOpen: false,
-                                    nearest,
-                                };
-                            } else {
-                                validationCache.current[symbol][day].nearest =
-                                    nearest;
+                        nearestResults.forEach(({ day, nearest, error }) => {
+                            if (!error && nearest !== null) {
+                                if (!validationCache.current[symbol][day]) {
+                                    validationCache.current[symbol][day] = {
+                                        isOpen: false,
+                                        nearest,
+                                    };
+                                } else {
+                                    validationCache.current[symbol][day].nearest = nearest;
+                                }
                             }
                         });
 
-                        nearestResults.forEach(({ day, nearest }) => {
-                            if (day === start) nearestForStart = nearest;
-                            if (day === end) nearestForEnd = nearest;
+                        nearestResults.forEach(({ day, nearest, error }) => {
+                            if (!error && nearest !== null) {
+                                if (day === start) nearestForStart = nearest;
+                                if (day === end) nearestForEnd = nearest;
+                            }
                         });
                     }
 
@@ -176,7 +231,7 @@ export function useDateValidation() {
                         return {
                             previous:
                                 suggestions.previous &&
-                                suggestions.previous <= maxDate
+                                    suggestions.previous <= maxDate
                                     ? suggestions.previous
                                     : null,
                             next:
@@ -192,7 +247,7 @@ export function useDateValidation() {
                         filterSuggestions(nearestForEnd);
 
                     let errorMessage = "";
-                    if (!isStartOpen) {
+                    if (isStartOpen === false) {
                         if (start > maxDate) {
                             errorMessage = `Start date must be before ${maxDate}.`;
                         } else if (start === maxDate) {
@@ -213,7 +268,7 @@ export function useDateValidation() {
                             }`;
                         }
                     }
-                    if (!isEndOpen) {
+                    if (isEndOpen === false) {
                         if (end > maxDate) {
                             errorMessage = errorMessage
                                 ? `${errorMessage} End date must be before ${maxDate}.`
@@ -251,10 +306,18 @@ export function useDateValidation() {
                     };
                 }
 
+                if (isStartOpen === true && isEndOpen === true) {
+                    return {
+                        valid: true,
+                        adjustedStart: start,
+                        adjustedEnd: end,
+                    };
+                }
                 return {
-                    valid: true,
-                    adjustedStart: start,
-                    adjustedEnd: end,
+                    valid: false,
+                    message: "Unexpected validation state. Please try again.",
+                    startSuggestions: { previous: null, next: null },
+                    endSuggestions: { previous: null, next: null },
                 };
             } catch (error) {
                 return {
