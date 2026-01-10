@@ -30,7 +30,7 @@ export function DateField<T extends FieldValues>({
                     hasError={!!fieldState.error}
                 >
                     <FormControl>
-                        <Input type="date" {...field} />
+                        <Input type="date" min="2016-01-04" {...field} />
                     </FormControl>
                 </FormFieldWithTooltip>
             )}
