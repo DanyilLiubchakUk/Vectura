@@ -177,7 +177,7 @@ export function BacktestResults({ result, runId }: {
                                     Backtest Information
                                 </h3>
                                 <div className="overflow-x-auto">
-                                    <table className="w-full table-auto">
+                                    <table className="w-full">
                                         <tbody>
                                             <MetricTableRow
                                                 label="Stock"
@@ -303,7 +303,7 @@ export function BacktestResults({ result, runId }: {
                         {metrics && (
                             <div className={cn("flex", group2SpanClasses, secondSeparatorClasses !== "horizontal" ? "" : "flex-col")}>
                                 <Separator orientation={secondSeparatorClasses !== "horizontal" ? "vertical" : "horizontal"} className={cn(secondSeparatorClasses !== "horizontal" ? "mr-6" : "mb-3")} />
-                                <div className="space-y-1.5">
+                                <div className="space-y-1.5 flex-1">
                                     <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                                         Financial Metrics
                                     </h3>
@@ -387,7 +387,7 @@ export function BacktestResults({ result, runId }: {
                                 )}
                             </Button>
                             {shouldRenderChart && !isDialogOpen && (
-                                <div 
+                                <div
                                     className="fixed -left-[9999px] -top-[9999px] w-screen h-screen pointer-events-none opacity-0"
                                     style={{ visibility: 'hidden', zIndex: -1 }}
                                 >
