@@ -135,7 +135,7 @@ function BacktestPageContent() {
                     <Tabs
                         value={activeTab}
                         onValueChange={setActiveTab}
-                        className="flex-1 flex flex-col overflow-hidden"
+                        className="flex-1 flex flex-col overflow-hidden gap-0"
                     >
                         <div className="px-4 pt-4">
                             <div className="space-y-2 mb-4">
@@ -148,7 +148,9 @@ function BacktestPageContent() {
                                 </p>
                             </div>
                             <TabsList className="w-full">
-                                <TabsTrigger value="form" className="flex-1">
+                                <TabsTrigger
+                                    value="form"
+                                    className="flex-1">
                                     Form
                                 </TabsTrigger>
                                 <TabsTrigger
@@ -161,7 +163,7 @@ function BacktestPageContent() {
                         </div>
                         <TabsContent
                             value="form"
-                            className="flex-1 overflow-y-auto px-4 pb-4 mt-4"
+                            className="flex-1 px-4 pb-4 mt-4"
                         >
                             <Card>
                                 <CardHeader>
@@ -183,7 +185,7 @@ function BacktestPageContent() {
                         </TabsContent>
                         <TabsContent
                             value="progress"
-                            className="flex-1 flex flex-col overflow-hidden mt-4"
+                            className="flex-1 flex flex-col"
                         >
                             <BacktestRunsList onRunAdded={handleRunStarted} />
                         </TabsContent>
