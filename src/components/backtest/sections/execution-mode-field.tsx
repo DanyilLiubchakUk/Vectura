@@ -70,39 +70,72 @@ export function ExecutionModeField({ control }: ExecutionModeFieldProps) {
                     >
                         {executionModeOptions.map((opt, i) => {
                             const Icon = iconMap[i];
+                            const isChecked = field.value === opt.value;
+                            const radioId = `execution-mode-${opt.value}`;
                             return (
                                 <Tooltip key={opt.value}>
-                                    <TooltipTrigger asChild className="flex-1">
-                                        <Label
-                                            htmlFor={`execution-mode-${opt.value}`}
-                                            className="flex-col items-start justify-center has-data-[state=checked]:border-primary/50 has-data-[state=checked]:bg-input/20 has-data-[state=checked]:dark:bg-input/30 relative rounded-md border p-2 shadow-xs outline-none transition-colors data-[state=checked]:border-primary/60 group"
-                                        >
-                                            <div className="flex justify-between w-full">
-                                                <div className="flex items-center gap-3">
-                                                    <Icon className="size-4 group-[has-data-[state=checked]]:text-muted-foreground" />
-                                                    <span className="pr-3">
-                                                        {opt.label}
-                                                    </span>
-                                                </div>
-                                                <RadioGroupItem
-                                                    value={opt.value}
-                                                    id={`execution-mode-${opt.value}`}
-                                                    aria-label={opt.value}
-                                                />
-                                            </div>
-                                            <FormDescription
+                                    <div className="flex-1">
+                                        <TooltipTrigger asChild>
+                                            <div
                                                 className={cn(
-                                                    "text-xs",
-                                                    descriptionClasses
+                                                    "cursor-pointer flex-col items-start justify-center relative rounded-md border p-2 shadow-xs outline-none transition-colors group flex-1",
+                                                    "border-input bg-input/20 dark:bg-input/30",
+                                                    "hover:bg-input/40 dark:hover:bg-input/50",
+                                                    "hover:border-ring/50",
+                                                    isChecked && "border-primary/60 bg-input/30 dark:bg-input/40",
+                                                    isChecked && "hover:bg-input/40 dark:hover:bg-input/50"
                                                 )}
                                             >
-                                                {opt.description}
-                                            </FormDescription>
-                                        </Label>
-                                    </TooltipTrigger>
-                                    <TooltipContent className={tooltipClasses}>
-                                        <p>{opt.description}</p>
-                                    </TooltipContent>
+                                                <div className="flex items-start gap-2">
+                                                    <Label
+                                                        htmlFor={radioId}
+                                                        className="flex flex-col items-start flex-1 cursor-pointer"
+                                                    >
+                                                        <div className="flex items-center gap-3 w-full">
+                                                            <Icon
+                                                                className={cn(
+                                                                    "size-4 transition-colors",
+                                                                    isChecked
+                                                                        ? "text-primary"
+                                                                        : "text-muted-foreground"
+                                                                )}
+                                                            />
+                                                            <span
+                                                                className={cn(
+                                                                    "transition-colors font-medium",
+                                                                    isChecked
+                                                                        ? "text-foreground"
+                                                                        : "text-muted-foreground"
+                                                                )}
+                                                            >
+                                                                {opt.label}
+                                                            </span>
+                                                        </div>
+                                                        <FormDescription
+                                                            className={cn(
+                                                                "text-xs transition-colors mt-1",
+                                                                descriptionClasses,
+                                                                isChecked
+                                                                    ? "text-foreground/70"
+                                                                    : "text-muted-foreground"
+                                                            )}
+                                                        >
+                                                            {opt.description}
+                                                        </FormDescription>
+                                                    </Label>
+                                                    <RadioGroupItem
+                                                        value={opt.value}
+                                                        id={radioId}
+                                                        aria-label={opt.value}
+                                                        className="shrink-0 mt-0.5"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent className={tooltipClasses}>
+                                            <p>{opt.description}</p>
+                                        </TooltipContent>
+                                    </div>
                                 </Tooltip>
                             );
                         })}
