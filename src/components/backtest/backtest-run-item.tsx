@@ -37,14 +37,6 @@ export function BacktestRunItem({
     const [isOpen, setIsOpen] = useState(defaultOpen);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const buttonVisibilityClasses = useElementSize(containerRef, [
-        {
-            operator: ">=",
-            size: MEDIA_QUERY_BREAKPOINTS.MD,
-            classes: "opacity-0 group-hover:opacity-100 transition-opacity",
-        },
-    ]);
-
     if (!run) {
         return null;
     }
@@ -69,7 +61,7 @@ export function BacktestRunItem({
 
     return (
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-            <div ref={containerRef} className="group">
+            <div ref={containerRef}>
                 <div className="flex items-center w-full p-4 border rounded-lg hover:bg-accent transition-colors">
                     <CollapsibleTrigger className="flex items-center gap-3 relative w-0 flex-1 min-w-0">
                         <ExecutionModeIcon
@@ -87,10 +79,7 @@ export function BacktestRunItem({
                     </CollapsibleTrigger>
                     <div className="flex items-center gap-2">
                         <div
-                            className={cn(
-                                "flex items-center gap-1",
-                                buttonVisibilityClasses
-                            )}
+                            className="flex items-center gap-1"
                         >
                             <BacktestEditDialog runId={runId} />
 
@@ -99,7 +88,7 @@ export function BacktestRunItem({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7"
+                                    className="h-7 w-7 hover:text-muted-foreground"
                                     onClick={handleCancel}
                                     title="Cancel"
                                 >
@@ -111,7 +100,7 @@ export function BacktestRunItem({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-destructive hover:text-destructive"
+                                className="h-7 w-7 text-destructive hover:text-destructive/70"
                                 onClick={handleRemove}
                                 title="Remove"
                             >
