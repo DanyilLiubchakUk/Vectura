@@ -71,7 +71,7 @@ export function BacktestEditDialog({ runId }: { runId: string }) {
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger title="Edit Parameters" asChild>
+            <DialogTrigger className="inline-flex items-center justify-center size-7 hover:text-muted-foreground" title="Edit Parameters">
                 <Pencil className="h-4 w-4" />
             </DialogTrigger>
             <DialogContent className="p-0 max-h-[calc(100%-2rem)] flex flex-col sm:max-w-[calc(100%-2rem)] md:max-w-2xl lg:max-w-4xl xl:max-w-6xl">

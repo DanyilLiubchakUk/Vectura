@@ -1,13 +1,16 @@
 "use client";
 
 import {
+    defaultBacktestFormValues,
+    saveBacktestFormValues,
+} from "@/components/backtest/defaults";
+import {
     backtestFormSchema,
     type BacktestFormValues,
 } from "@/components/backtest/schema";
 import { ExecutionModeField } from "@/components/backtest/sections/execution-mode-field";
 import { StrategyFields } from "@/components/backtest/sections/strategy-fields";
 import { CapitalFields } from "@/components/backtest/sections/capital-fields";
-import { defaultBacktestFormValues } from "@/components/backtest/defaults";
 import { FormContainerProvider } from "@/contexts/form-container-context";
 import { BasicFields } from "@/components/backtest/sections/basic-fields";
 import { MEDIA_QUERY_BREAKPOINTS } from "@/constants/media-queries";
@@ -23,8 +26,10 @@ import { cn } from "@/lib/utils";
 
 export default function BacktestForm({
     onRunStarted,
+    initialValues,
 }: {
     onRunStarted?: (runId: string) => void;
+    initialValues?: BacktestFormValues;
 }) {
     const form = useForm<BacktestFormValues>({
         resolver: zodResolver(
@@ -32,6 +37,43 @@ export default function BacktestForm({
         ) as Resolver<BacktestFormValues>,
         defaultValues: defaultBacktestFormValues,
     });
+
+    const isResettingRef = useRef(false);
+    const saveDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        if (initialValues) {
+            isResettingRef.current = true;
+            form.reset(initialValues);
+            const timer = setTimeout(() => {
+                isResettingRef.current = false;
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [form, initialValues]);
+
+    const formValues = form.watch();
+    useEffect(() => {
+        if (isResettingRef.current) {
+            return;
+        }
+
+        if (saveDebounceTimerRef.current) {
+            clearTimeout(saveDebounceTimerRef.current);
+        }
+
+        saveDebounceTimerRef.current = setTimeout(() => {
+            if (!isResettingRef.current) {
+                saveBacktestFormValues(formValues);
+            }
+        }, 500); // 500ms debounce
+
+        return () => {
+            if (saveDebounceTimerRef.current) {
+                clearTimeout(saveDebounceTimerRef.current);
+            }
+        };
+    }, [formValues]);
 
     const { startBacktest } = useBacktestRunner();
     const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(
@@ -67,6 +109,8 @@ export default function BacktestForm({
             setIsSubmitting(true);
 
             try {
+                saveBacktestFormValues(values);
+
                 const runId = await startBacktest(values);
 
                 if (onRunStarted) {
