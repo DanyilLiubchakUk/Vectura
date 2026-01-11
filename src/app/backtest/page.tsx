@@ -15,13 +15,58 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BacktestRunExecutor } from "@/components/backtest/backtest-run-executor";
 import { BacktestRunsList } from "@/components/backtest/backtest-runs-list";
+import { loadBacktestFormValues } from "@/components/backtest/defaults";
 import { AppHeader } from "@/components/layout/app-header";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import BacktestForm from "@/components/backtest/form";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import type { BacktestFormValues } from "@/components/backtest/schema";
 
 function BacktestPageContent() {
     const [activeTab, setActiveTab] = useState("form");
+    const [initialValues, setInitialValues] = useState<BacktestFormValues | undefined>(undefined);
+    const [windowWidth, setWindowWidth] = useState<number | undefined>(undefined);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        const updateWidth = () => {
+            setWindowWidth(window.innerWidth);
+        };
+
+        updateWidth();
+
+        // Listen for resize events
+        const observer = new ResizeObserver(() => updateWidth());
+        observer.observe(document.body);
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        const loaded = loadBacktestFormValues();
+        if (loaded) {
+            setInitialValues(loaded);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (activeTab === "form") {
+            const loaded = loadBacktestFormValues();
+            if (loaded) {
+                setInitialValues(loaded);
+            }
+        }
+    }, [activeTab]);
+
+    // Reload values when window width changes (desktop <-> mobile switch)
+    useEffect(() => {
+        if (windowWidth !== undefined) {
+            const loaded = loadBacktestFormValues();
+            if (loaded) {
+                setInitialValues(loaded);
+            }
+        }
+    }, [windowWidth]);
 
     const handleRunStarted = () => {
         // On mobile, switch to progress tab when run starts
@@ -71,6 +116,7 @@ function BacktestPageContent() {
                                         <CardContent>
                                             <BacktestForm
                                                 onRunStarted={handleRunStarted}
+                                                initialValues={initialValues}
                                             />
                                         </CardContent>
                                     </Card>
@@ -130,6 +176,7 @@ function BacktestPageContent() {
                                 <CardContent>
                                     <BacktestForm
                                         onRunStarted={handleRunStarted}
+                                        initialValues={initialValues}
                                     />
                                 </CardContent>
                             </Card>
