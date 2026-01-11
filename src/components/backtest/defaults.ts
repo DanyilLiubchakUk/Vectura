@@ -1,7 +1,7 @@
 import { GRID_TRADE_V0_DEFAULT_CONFIG } from "@/utils/trading/algorithms/constants";
+import { BACKTEST_FORM_STORAGE_KEY, DAYS_BEFORE_TODAY } from "@/backtest/constants";
 import { getTodayMinusDays } from "@/backtest/storage/dateUtils";
 import Ealgorighms from "@/utils/trading/algorithms/dictionary";
-import { DAYS_BEFORE_TODAY } from "@/backtest/constants";
 import type { BacktestFormValues } from "@/components/backtest/schema";
 
 export const defaultBacktestFormValues: BacktestFormValues = {
@@ -34,3 +34,23 @@ export const executionModeOptions = [
         description: "Run the backtest on our cloud infrastructure",
     },
 ] as const;
+
+export function saveBacktestFormValues(values: BacktestFormValues): void {
+    if (typeof window === "undefined") return;
+    try {
+        localStorage.setItem(BACKTEST_FORM_STORAGE_KEY, JSON.stringify(values));
+    } catch (error) {
+        // Ignore localStorage errors (quota exceeded, etc.)
+    }
+}
+
+export function loadBacktestFormValues(): BacktestFormValues | undefined {
+    if (typeof window === "undefined") return undefined;
+    try {
+        const stored = localStorage.getItem(BACKTEST_FORM_STORAGE_KEY);
+        if (!stored) return undefined;
+        return JSON.parse(stored) as BacktestFormValues;
+    } catch (error) {
+        return undefined;
+    }
+}
