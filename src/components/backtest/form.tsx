@@ -36,6 +36,7 @@ export default function BacktestForm({
             backtestFormSchema
         ) as Resolver<BacktestFormValues>,
         defaultValues: defaultBacktestFormValues,
+        mode: "onSubmit",
     });
 
     const isResettingRef = useRef(false);

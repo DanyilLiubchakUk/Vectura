@@ -32,6 +32,7 @@ export function StrategyFields({ control }: StrategyFieldsProps) {
                 min={0.1}
                 max={100}
                 step={0.1}
+                placeholder="60"
                 className={cn("col-span-12", colSpanClasses)}
             />
 
@@ -44,6 +45,7 @@ export function StrategyFields({ control }: StrategyFieldsProps) {
                 min={0.1}
                 max={100}
                 step={0.1}
+                placeholder="2"
                 className={cn("col-span-12", colSpanClasses)}
             />
 
@@ -56,6 +58,7 @@ export function StrategyFields({ control }: StrategyFieldsProps) {
                 min={0.1}
                 max={100}
                 step={0.1}
+                placeholder="18"
                 className={cn("col-span-12", colSpanClasses)}
             />
 
@@ -68,6 +71,7 @@ export function StrategyFields({ control }: StrategyFieldsProps) {
                 min={0.1}
                 max={100}
                 step={0.1}
+                placeholder="25"
                 className={cn("col-span-12", colSpanClasses)}
             />
 
@@ -81,6 +85,7 @@ export function StrategyFields({ control }: StrategyFieldsProps) {
                 min={0}
                 max={100}
                 step={0.1}
+                placeholder="1.5"
                 className={cn("col-span-12", colSpanClasses)}
             />
         </>

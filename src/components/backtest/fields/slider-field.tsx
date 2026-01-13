@@ -17,6 +17,7 @@ interface SliderFieldProps<T extends FieldValues> {
     description?: string;
     min: number;
     max: number;
+    placeholder: string;
     step?: number;
     disabled?: boolean;
     className?: string;
@@ -30,6 +31,7 @@ export function SliderField<T extends FieldValues>({
     description,
     min,
     max,
+    placeholder,
     step = 0.1,
     disabled = false,
     className,
@@ -91,10 +93,18 @@ export function SliderField<T extends FieldValues>({
                                     step={step}
                                     className="w-20"
                                     disabled={disabled}
+                                    placeholder={placeholder}
                                     {...field}
-                                    onChange={(e) =>
-                                        field.onChange(Number(e.target.value))
-                                    }
+                                    value={field.value === null || field.value === undefined || isNaN(field.value) ? "" : String(field.value)}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        if (value === "") {
+                                            field.onChange(NaN);
+                                        } else {
+                                            const numValue = Number(value);
+                                            field.onChange(isNaN(numValue) ? NaN : numValue);
+                                        }
+                                    }}
                                 />
                             </FormControl>
                             {description && (
@@ -113,7 +123,7 @@ export function SliderField<T extends FieldValues>({
                                 min={min}
                                 max={max}
                                 step={step}
-                                value={[field.value]}
+                                value={[field.value === null || field.value === undefined || isNaN(field.value) ? min : field.value]}
                                 onValueChange={(values) =>
                                     field.onChange(values[0])
                                 }

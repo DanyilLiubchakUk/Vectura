@@ -11,6 +11,7 @@ interface ToggleSliderFieldProps<T extends FieldValues> {
     description?: string;
     min: number;
     max: number;
+    placeholder: string;
     step?: number;
     className?: string;
 }
@@ -23,6 +24,7 @@ export function ToggleSliderField<T extends FieldValues>({
     description,
     min,
     max,
+    placeholder,
     step = 0.1,
     className,
 }: ToggleSliderFieldProps<T>) {
@@ -62,6 +64,7 @@ export function ToggleSliderField<T extends FieldValues>({
                                 step={step}
                                 disabled={!isEnabled}
                                 className={className}
+                                placeholder={placeholder}
                             />
                         );
                     }}

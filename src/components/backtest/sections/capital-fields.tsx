@@ -5,7 +5,6 @@ import { MEDIA_QUERY_BREAKPOINTS } from "@/constants/media-queries";
 import { FormField, FormControl } from "@/components/ui/form";
 import { useElementSize } from "@/hooks/use-element-size";
 import { Input } from "@/components/ui/input";
-import { useWatch } from "react-hook-form";
 import { cn } from "@/lib/utils";
 import type { BacktestFormValues } from "@/components/backtest/schema";
 import type { Control } from "react-hook-form";
@@ -23,15 +22,6 @@ export function CapitalFields({ control }: CapitalFieldsProps) {
             classes: "col-span-3",
         },
     ]);
-
-    const contributionFrequencyDays = useWatch({
-        control,
-        name: "contributionFrequencyDays",
-    });
-
-    const showContributionAmount =
-        contributionFrequencyDays !== undefined &&
-        Number(contributionFrequencyDays) > 0;
 
     return (
         <>
@@ -68,7 +58,7 @@ export function CapitalFields({ control }: CapitalFieldsProps) {
                 render={({ field, fieldState }) => (
                     <FormFieldWithTooltip
                         label="Contribution Frequency (Days)"
-                        description="How often to add funds (0 to disable)"
+                        description="How often to add funds"
                         hasError={!!fieldState.error}
                         className={cn("col-span-6", gridClasses)}
                     >
@@ -77,13 +67,17 @@ export function CapitalFields({ control }: CapitalFieldsProps) {
                                 type="number"
                                 placeholder="7"
                                 step="1"
+                                min="0"
                                 {...field}
-                                value={field.value ?? ""}
+                                value={field.value === null || field.value === undefined || isNaN(field.value) ? "" : String(field.value)}
                                 onChange={(e) => {
                                     const value = e.target.value;
-                                    field.onChange(
-                                        value === "" ? undefined : Number(value)
-                                    );
+                                    if (value === "") {
+                                        field.onChange(NaN);
+                                    } else {
+                                        const numValue = Number(value);
+                                        field.onChange(isNaN(numValue) ? NaN : numValue);
+                                    }
                                 }}
                             />
                         </FormControl>
@@ -92,38 +86,38 @@ export function CapitalFields({ control }: CapitalFieldsProps) {
             />
 
             {/* Contribution Amount */}
-            {showContributionAmount && (
-                <FormField
-                    control={control}
-                    name="contributionAmount"
-                    render={({ field, fieldState }) => (
-                        <FormFieldWithTooltip
-                            label="Contribution Amount"
-                            description="Amount to contribute each period"
-                            hasError={!!fieldState.error}
-                            className={cn("col-span-6", gridClasses)}
-                        >
-                            <FormControl>
-                                <Input
-                                    type="number"
-                                    placeholder="500"
-                                    step="1"
-                                    {...field}
-                                    value={field.value ?? ""}
-                                    onChange={(e) => {
-                                        const value = e.target.value;
-                                        field.onChange(
-                                            value === ""
-                                                ? undefined
-                                                : Number(value)
-                                        );
-                                    }}
-                                />
-                            </FormControl>
-                        </FormFieldWithTooltip>
-                    )}
-                />
-            )}
+            <FormField
+                control={control}
+                name="contributionAmount"
+                render={({ field, fieldState }) => (
+                    <FormFieldWithTooltip
+                        label="Contribution Amount"
+                        description="Amount to contribute each time"
+                        hasError={!!fieldState.error}
+                        className={cn("col-span-6", gridClasses)}
+                    >
+                        <FormControl>
+                            <Input
+                                type="number"
+                                placeholder="500"
+                                step="1"
+                                min="0"
+                                {...field}
+                                value={field.value === null || field.value === undefined || isNaN(field.value) ? "" : String(field.value)}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (value === "") {
+                                        field.onChange(NaN);
+                                    } else {
+                                        const numValue = Number(value);
+                                        field.onChange(isNaN(numValue) ? NaN : numValue);
+                                    }
+                                }}
+                            />
+                        </FormControl>
+                    </FormFieldWithTooltip>
+                )}
+            />
         </>
     );
 }

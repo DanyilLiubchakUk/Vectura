@@ -28,9 +28,9 @@ export function BacktestConfigDisplay({ config }: { config: BacktestConfig }) {
             `Sell Above: ${formatPercent(config.sellAbovePct)}`,
             `Buy After Sell: ${formatPercent(config.buyAfterSellPct)}`,
             `Cash per trade: ${formatPercent(config.capitalPct)}`,
-            config.contributionFrequencyDays && config.contributionAmount
-                ? `Contribute $${config.contributionAmount.toLocaleString()} every ${config.contributionFrequencyDays
-                }d`
+            (config.contributionFrequencyDays && config.contributionFrequencyDays > 0) &&
+                (config.contributionAmount && config.contributionAmount > 0)
+                ? `Contribute $${config.contributionAmount.toLocaleString()} every ${config.contributionFrequencyDays}d`
                 : null,
             `Start capital: $${config.startCapital}`,
             `Cash floor: $${config.cashFloor}`,
