@@ -39,34 +39,22 @@ export default function BacktestForm({
         mode: "onSubmit",
     });
 
-    const isResettingRef = useRef(false);
     const saveDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         if (initialValues) {
-            isResettingRef.current = true;
             form.reset(initialValues);
-            const timer = setTimeout(() => {
-                isResettingRef.current = false;
-            }, 100);
-            return () => clearTimeout(timer);
         }
     }, [form, initialValues]);
 
     const formValues = form.watch();
     useEffect(() => {
-        if (isResettingRef.current) {
-            return;
-        }
-
         if (saveDebounceTimerRef.current) {
             clearTimeout(saveDebounceTimerRef.current);
         }
 
         saveDebounceTimerRef.current = setTimeout(() => {
-            if (!isResettingRef.current) {
-                saveBacktestFormValues(formValues);
-            }
+            saveBacktestFormValues(formValues);
         }, 500); // 500ms debounce
 
         return () => {
@@ -163,17 +151,7 @@ export default function BacktestForm({
                         </div>
                     </TooltipProvider>
 
-                    <div className="gap-2 flex flex-col-reverse sm:flex-row sm:justify-end mt-3">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                                form.reset();
-                            }}
-                            disabled={isSubmitting}
-                        >
-                            Reset
-                        </Button>
+                    <div className="flex justify-end mt-3">
                         <Button
                             type="submit"
                             className="min-w-[120px]"
