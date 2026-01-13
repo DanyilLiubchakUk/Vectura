@@ -44,7 +44,7 @@ export function BacktestConfigDisplay({ config }: { config: BacktestConfig }) {
         <div ref={containerRef} className="rounded-md border bg-card p-2 mb-0">
             <div
                 className={cn(
-                    "grid gap-x-3 gap-y-1.5 text-[10px] grid-cols-5",
+                    "grid gap-x-3 gap-y-1.5 text-xs grid-cols-5",
                     gridClasses
                 )}
             >
