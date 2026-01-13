@@ -17,7 +17,6 @@ export function useBacktestRun(runId: string) {
             const config: BacktestConfig = {
                 executionMode: values.executionMode,
                 stock: values.stock,
-                algorithm: values.algorithm,
                 startDate: values.startDate,
                 endDate: values.endDate,
                 startCapital: values.startCapital,

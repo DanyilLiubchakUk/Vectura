@@ -1,6 +1,5 @@
 "use client";
 
-import { algorithmOptions } from "@/components/backtest/sections/basic-fields";
 import { MEDIA_QUERY_BREAKPOINTS } from "@/constants/media-queries";
 import { formatDate } from "@/app/ranges/utils/date-helpers";
 import { useElementSize } from "@/hooks/use-element-size";
@@ -10,9 +9,6 @@ import type { BacktestConfig } from "@/backtest/types";
 
 export function BacktestConfigDisplay({ config }: { config: BacktestConfig }) {
     const containerRef = useRef<HTMLDivElement>(null);
-    const algorithmName = algorithmOptions.find(
-        (algo) => algo.value === config.algorithm
-    )?.label;
 
     const formatPercent = (value: number) => `${value}%`;
 
@@ -26,7 +22,7 @@ export function BacktestConfigDisplay({ config }: { config: BacktestConfig }) {
 
     const configItems = useMemo(() => {
         const items: (string | null)[] = [
-            `${algorithmName} on ${config.stock}`,
+            `Stock: ${config.stock}`,
             `${formatDate(config.startDate)} - ${formatDate(config.endDate)}`,
             `Buy Below: ${formatPercent(config.buyBelowPct)}`,
             `Sell Above: ${formatPercent(config.sellAbovePct)}`,
@@ -42,7 +38,7 @@ export function BacktestConfigDisplay({ config }: { config: BacktestConfig }) {
         ];
 
         return items.filter((item): item is string => item !== null);
-    }, [config, algorithmName]);
+    }, [config]);
 
     return (
         <div ref={containerRef} className="rounded-md border bg-card p-2 mb-0">

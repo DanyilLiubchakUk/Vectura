@@ -44,7 +44,6 @@ export function BacktestEditDialog({ runId }: { runId: string }) {
         name: run.name,
         executionMode: run.config.executionMode,
         stock: run.config.stock,
-        algorithm: run.config.algorithm,
         startDate: run.config.startDate,
         endDate: run.config.endDate,
         startCapital: run.config.startCapital,

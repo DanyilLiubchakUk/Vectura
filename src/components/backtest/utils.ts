@@ -8,7 +8,6 @@ export function prepareBacktestSubmissionData(
 
     return {
         stock: values.stock.toUpperCase(),
-        algorithm: values.algorithm,
         startDate: values.startDate,
         endDate: values.endDate,
         startCapital: values.startCapital,
@@ -25,7 +24,6 @@ export function prepareBacktestSubmissionData(
 
 export interface BacktestSubmissionData {
     stock: string;
-    algorithm: string;
     startDate: string;
     endDate: string;
     startCapital: number;

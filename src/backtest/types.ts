@@ -118,7 +118,6 @@ export interface BacktestResult {
 export interface BacktestConfig {
     executionMode: "local" | "cloud";
     stock: string;
-    algorithm: string;
     startDate: string;
     endDate: string;
     startCapital: number;

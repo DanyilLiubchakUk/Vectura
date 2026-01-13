@@ -19,23 +19,8 @@ export function CapitalFields({ control }: CapitalFieldsProps) {
     const gridClasses = useElementSize(containerRef, [
         {
             operator: ">=",
-            size: MEDIA_QUERY_BREAKPOINTS.XL,
-            classes: "col-span-3",
-        },
-        {
-            operator: "<",
-            size: MEDIA_QUERY_BREAKPOINTS.XL,
-            classes: "col-span-4",
-        },
-        {
-            operator: "<",
-            size: MEDIA_QUERY_BREAKPOINTS.LG,
-            classes: "col-span-3",
-        },
-        {
-            operator: "<",
             size: MEDIA_QUERY_BREAKPOINTS.MD,
-            classes: "col-span-6",
+            classes: "col-span-3",
         },
     ]);
 
@@ -59,7 +44,7 @@ export function CapitalFields({ control }: CapitalFieldsProps) {
                 placeholder="1000"
                 type="number"
                 step="1"
-                className={cn(gridClasses)}
+                className={cn("col-span-6", gridClasses)}
             />
 
             {/* Cash Floor */}
@@ -73,7 +58,7 @@ export function CapitalFields({ control }: CapitalFieldsProps) {
                 step="1"
                 min={0}
                 transformValue={(value) => Number(value)}
-                className={cn(gridClasses)}
+                className={cn("col-span-6", gridClasses)}
             />
 
             {/* Contribution Frequency */}
@@ -85,7 +70,7 @@ export function CapitalFields({ control }: CapitalFieldsProps) {
                         label="Contribution Frequency (Days)"
                         description="How often to add funds (0 to disable)"
                         hasError={!!fieldState.error}
-                        className={cn(gridClasses)}
+                        className={cn("col-span-6", gridClasses)}
                     >
                         <FormControl>
                             <Input
@@ -116,7 +101,7 @@ export function CapitalFields({ control }: CapitalFieldsProps) {
                             label="Contribution Amount"
                             description="Amount to contribute each period"
                             hasError={!!fieldState.error}
-                            className={cn(gridClasses)}
+                            className={cn("col-span-6", gridClasses)}
                         >
                             <FormControl>
                                 <Input

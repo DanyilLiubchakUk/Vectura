@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { getTodayMinusDays } from "@/backtest/storage/dateUtils";
 import { DAYS_BEFORE_TODAY } from "@/backtest/constants";
-import Ealgorighms from "@/utils/trading/algorithms/dictionary";
 
 export const backtestFormSchema = z
     .object({
@@ -14,14 +13,6 @@ export const backtestFormSchema = z
             .string()
             .min(1, "Stock symbol is required")
             .max(10, "Stock symbol is too long"),
-        algorithm: z
-            .string()
-            .min(1, "Please select an algorithm")
-            .refine(
-                (val) =>
-                    Object.values(Ealgorighms).includes(val as Ealgorighms),
-                { message: "Invalid algorithm selected" }
-            ),
         startDate: z
             .string()
             .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in MM/DD/YYYY format"),
