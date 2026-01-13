@@ -11,7 +11,6 @@ export function useBacktestRunner() {
             const config: BacktestConfig = {
                 executionMode: values.executionMode,
                 stock: values.stock,
-                algorithm: values.algorithm,
                 startDate: values.startDate,
                 endDate: values.endDate,
                 startCapital: values.startCapital,
@@ -22,7 +21,10 @@ export function useBacktestRunner() {
                 sellAbovePct: values.sellAbovePct,
                 buyAfterSellPct: values.buyAfterSellPct,
                 cashFloor: values.cashFloor,
-                orderGapPct: values.orderGapPct,
+                orderGapFilterEnabled: values.orderGapFilterEnabled,
+                orderGapPct: values.orderGapFilterEnabled === false
+                    ? -1
+                    : values.orderGapPct,
             };
 
             const runId = addRun(values.name || "Untitled Backtest", config);

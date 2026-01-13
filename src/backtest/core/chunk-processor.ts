@@ -24,7 +24,6 @@ export async function processChunk(
     stock: string,
     endDate: string,
     startDate: string,
-    algorithm: string,
     desiredStart: string,
     endBoundaryIso: string,
     nextContributionDate: Date | null,
@@ -112,7 +111,7 @@ export async function processChunk(
             isFirstBar = false;
         }
 
-        await runAlgorithm(algorithm, stock, bar, onProgress, orderTracker, priceCollector, metricsTracker);
+        await runAlgorithm(stock, bar, orderTracker, priceCollector, metricsTracker);
 
         const state = backtestStore.getState();
         if (state.capital) {

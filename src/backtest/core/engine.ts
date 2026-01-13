@@ -113,7 +113,6 @@ export async function runBacktestCore(
             config.stock,
             config.endDate,
             config.startDate,
-            config.algorithm,
             boundaries.desiredStart,
             boundaries.endBoundaryIso,
             currentNextContributionDate,

@@ -1,10 +1,9 @@
 import readline from "readline";
-import Ealgorighms from "@/utils/trading/algorithms/dictionary";
 import { runBacktestCore } from "@/backtest/core/engine";
 import { validateDateRange } from "@/backtest/storage/rangeManager";
 import { readSymbolRange } from "@/utils/supabase/backtestStorage";
 import type { BacktestConfig, BacktestProgressEvent } from "@/backtest/types";
-import { GRID_TRADE_V0_DEFAULT_CONFIG } from "@/utils/trading/algorithms/constants";
+import { GRID_TRADE_DEFAULT_CONFIG } from "@/utils/trading/algorithms/constants";
 
 const rl = readline.createInterface({
     input: process.stdin,
@@ -19,18 +18,17 @@ function askQuestion(query: string): Promise<string> {
 // Types and defaults
 const defaultArgs = {
     stock: "TQQQ",
-    algorithm: Ealgorighms.GridV0,
     startDate: "2024-01-01",
     endDate: "2025-01-01",
     startCapital: 1000,
     contributionFrequencyDays: 7,
     contributionAmount: 500,
-    capitalPct: GRID_TRADE_V0_DEFAULT_CONFIG.capitalPct,
-    buyBelowPct: GRID_TRADE_V0_DEFAULT_CONFIG.buyBelowPct,
-    sellAbovePct: GRID_TRADE_V0_DEFAULT_CONFIG.sellAbovePct,
-    buyAfterSellPct: GRID_TRADE_V0_DEFAULT_CONFIG.buyAfterSellPct,
-    cashFloor: GRID_TRADE_V0_DEFAULT_CONFIG.cashFloor,
-    orderGapPct: GRID_TRADE_V0_DEFAULT_CONFIG.orderGapPct,
+    capitalPct: GRID_TRADE_DEFAULT_CONFIG.capitalPct,
+    buyBelowPct: GRID_TRADE_DEFAULT_CONFIG.buyBelowPct,
+    sellAbovePct: GRID_TRADE_DEFAULT_CONFIG.sellAbovePct,
+    buyAfterSellPct: GRID_TRADE_DEFAULT_CONFIG.buyAfterSellPct,
+    cashFloor: GRID_TRADE_DEFAULT_CONFIG.cashFloor,
+    orderGapPct: GRID_TRADE_DEFAULT_CONFIG.orderGapPct,
     executionMode: "local" as const,
 };
 
@@ -60,24 +58,23 @@ function isNonNegativeNumber(n: number) {
 
 function isOrderGapRange(n: number) {
     const num = Number(n);
-    return !isNaN(num) && num >= -1 && num <= 100;
+    return !isNaN(num) && num >= 0 && num <= 100;
 }
 
 async function getArguments() {
     let stock = process.argv[2];
-    let algorithm = process.argv[3];
-    let startDate = process.argv[4];
-    let endDate = process.argv[5];
-    let startCapital = Number(process.argv[6]);
-    let contributionFrequencyDays = Number(process.argv[7]);
-    let contributionAmount = Number(process.argv[8]);
-    let capitalPct = Number(process.argv[9]);
-    let buyBelowPct = Number(process.argv[10]);
-    let sellAbovePct = Number(process.argv[11]);
-    let buyAfterSellPct = Number(process.argv[12]);
-    let cashFloor = Number(process.argv[13]);
-    let orderGapPct = Number(process.argv[14]);
-    let executionMode = process.argv[15] as "local" | "cloud" | undefined;
+    let startDate = process.argv[3];
+    let endDate = process.argv[4];
+    let startCapital = Number(process.argv[5]);
+    let contributionFrequencyDays = Number(process.argv[6]);
+    let contributionAmount = Number(process.argv[7]);
+    let capitalPct = Number(process.argv[8]);
+    let buyBelowPct = Number(process.argv[9]);
+    let sellAbovePct = Number(process.argv[10]);
+    let buyAfterSellPct = Number(process.argv[11]);
+    let cashFloor = Number(process.argv[12]);
+    let orderGapPct = Number(process.argv[13]);
+    let executionMode = process.argv[14] as "local" | "cloud" | undefined;
 
     const argsCount = process.argv.length - 2;
 
@@ -93,7 +90,6 @@ async function getArguments() {
 
         if (ans === "" || ans === "y" || ans === "yes" || ans === "Y") {
             stock = defaultArgs.stock;
-            algorithm = defaultArgs.algorithm;
             startDate = defaultArgs.startDate;
             endDate = defaultArgs.endDate;
             startCapital = defaultArgs.startCapital;
@@ -110,9 +106,6 @@ async function getArguments() {
             stock =
                 (await askQuestion(`Enter stock symbol (e.g., AAPL): `)) ||
                 defaultArgs.stock;
-            algorithm =
-                (await askQuestion(`Enter algorithm name: `)) ||
-                defaultArgs.algorithm;
             do {
                 startDate =
                     (await askQuestion(`Enter start date (YYYY-MM-DD): `)) ||
@@ -182,12 +175,21 @@ async function getArguments() {
                         await askQuestion(`Enter cash floor in dollars (>=0): `)
                     ) || defaultArgs.cashFloor;
             } while (!isNonNegativeNumber(cashFloor));
-            do {
-                orderGapPct =
-                    Number(
-                        await askQuestion(`Enter order gap % (-1 to 100): `)
-                    ) || defaultArgs.orderGapPct;
-            } while (!isOrderGapRange(orderGapPct));
+            const enableFiltering = (
+                await askQuestion(`Enable order gap filtering? (Y/n): `)
+            )
+                .trim()
+                .toLowerCase();
+            if (enableFiltering === "" || enableFiltering === "y" || enableFiltering === "yes") {
+                do {
+                    orderGapPct =
+                        Number(
+                            await askQuestion(`Enter order gap % (0 to 100): `)
+                        ) || defaultArgs.orderGapPct;
+                } while (!isOrderGapRange(orderGapPct));
+            } else {
+                orderGapPct = -1;
+            }
             const modeAnswer =
                 (await askQuestion(
                     `Execution mode (local/cloud) [${defaultArgs.executionMode}]: `
@@ -203,12 +205,6 @@ async function getArguments() {
             stock =
                 (await askQuestion(`Enter stock symbol (e.g., AAPL): `)) ||
                 defaultArgs.stock;
-            needPrompt = true;
-        }
-        if (!algorithm) {
-            algorithm =
-                (await askQuestion(`Enter algorithm name: `)) ||
-                defaultArgs.algorithm;
             needPrompt = true;
         }
         if (!startDate || !isValidDate(startDate)) {
@@ -319,13 +315,24 @@ async function getArguments() {
             } while (!isNonNegativeNumber(cashFloor));
             needPrompt = true;
         }
-        if (!isOrderGapRange(orderGapPct)) {
-            do {
-                orderGapPct =
-                    Number(
-                        await askQuestion(`Enter order gap % (-1 to 100): `)
-                    ) || defaultArgs.orderGapPct;
-            } while (!isOrderGapRange(orderGapPct));
+        if (orderGapPct === -1) {
+            // Filtering is disabled, this is valid
+        } else if (!isOrderGapRange(orderGapPct)) {
+            const enableFiltering = (
+                await askQuestion(`Enable order gap filtering? (Y/n): `)
+            )
+                .trim()
+                .toLowerCase();
+            if (enableFiltering === "" || enableFiltering === "y" || enableFiltering === "yes") {
+                do {
+                    orderGapPct =
+                        Number(
+                            await askQuestion(`Enter order gap % (0 to 100): `)
+                        ) || defaultArgs.orderGapPct;
+                } while (!isOrderGapRange(orderGapPct));
+            } else {
+                orderGapPct = -1;
+            }
             needPrompt = true;
         }
         if (executionMode !== "local" && executionMode !== "cloud") {
@@ -341,7 +348,6 @@ async function getArguments() {
 
     return {
         stock,
-        algorithm,
         startDate,
         endDate,
         startCapital,
@@ -360,7 +366,6 @@ async function getArguments() {
 (async () => {
     const {
         stock,
-        algorithm,
         startDate,
         endDate,
         startCapital,
@@ -394,7 +399,6 @@ async function getArguments() {
 
     console.log("Running backtest with the following parameters:");
     console.log("Stock:             ", stock);
-    console.log("Algorithm:         ", algorithm);
     console.log("Start Date:        ", startDate);
     console.log("End Date:          ", endDate);
     console.log("Starting Capital:  ", startCapital);
@@ -411,7 +415,6 @@ async function getArguments() {
     const config: BacktestConfig = {
         executionMode: executionMode ?? "local",
         stock,
-        algorithm,
         startDate,
         endDate,
         startCapital,
@@ -422,6 +425,7 @@ async function getArguments() {
         sellAbovePct,
         buyAfterSellPct,
         cashFloor,
+        orderGapFilterEnabled: orderGapPct !== -1,
         orderGapPct,
     };
 

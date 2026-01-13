@@ -412,7 +412,7 @@ For each route integration, you need to grant API Gateway permission:
             "domainName": "test.execute-api.us-east-1.amazonaws.com",
             "stage": "prod"
         },
-        "body": "{\"type\":\"start_backtest\",\"mode\":\"cloud\",\"config\":{\"stock\":\"TQQQ\",\"algorithm\":\"GridV0\",\"startDate\":\"2024-01-01\",\"endDate\":\"2024-01-02\",\"startCapital\":1000}}"
+        "body": "{\"type\":\"start_backtest\",\"mode\":\"cloud\",\"config\":{\"stock\":\"TQQQ\",\"startDate\":\"2024-01-01\",\"endDate\":\"2024-01-02\",\"startCapital\":1000}}"
     }
     ```
 
@@ -475,7 +475,6 @@ ws.on("open", () => {
             mode: "cloud",
             config: {
                 stock: "TQQQ",
-                algorithm: "GridV0",
                 startDate: "2024-01-01",
                 endDate: "2024-01-02",
                 startCapital: 1000,

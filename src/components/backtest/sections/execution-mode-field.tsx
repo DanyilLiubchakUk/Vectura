@@ -87,7 +87,7 @@ export function ExecutionModeField({ control }: ExecutionModeFieldProps) {
                                                 isChecked && "hover:bg-input/40 dark:hover:bg-input/50"
                                             )}
                                         >
-                                            <div className="flex justify-between w-full items-center mb-2">
+                                            <div className="flex justify-between w-full items-center">
                                                 <div className="flex items-center gap-3 flex-1">
                                                     <Icon
                                                         className={cn(
@@ -116,7 +116,7 @@ export function ExecutionModeField({ control }: ExecutionModeFieldProps) {
                                             </div>
                                             <FormDescription
                                                 className={cn(
-                                                    "text-xs transition-colors text-start",
+                                                    "text-xs transition-colors text-start mt-2",
                                                     descriptionClasses,
                                                     isChecked
                                                         ? "text-foreground/70"

@@ -52,13 +52,27 @@ export function TextInputField<T extends FieldValues>({
                             max={max}
                             className={inputClassName}
                             {...field}
+                            value={type === "number" && (field.value === null || field.value === undefined || isNaN(field.value)) ? "" : (field.value ?? "")}
                             onChange={(e) => {
                                 const value = e.target.value;
-                                field.onChange(
-                                    transformValue
-                                        ? transformValue(value)
-                                        : value
-                                );
+                                if (type === "number") {
+                                    if (value === "") {
+                                        field.onChange(NaN);
+                                    } else {
+                                        const numValue = Number(value);
+                                        const transformedValue = transformValue
+                                            ? transformValue(value)
+                                            : numValue;
+                                        const finalValue = typeof transformedValue === 'string' ? Number(transformedValue) : transformedValue;
+                                        field.onChange(isNaN(Number(finalValue)) ? NaN : finalValue);
+                                    }
+                                } else {
+                                    field.onChange(
+                                        transformValue
+                                            ? transformValue(value)
+                                            : value
+                                    );
+                                }
                             }}
                         />
                     </FormControl>

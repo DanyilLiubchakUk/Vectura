@@ -392,7 +392,9 @@ export default function HowBacktestWorksPage() {
                                         percentage. Reduces action spam,
                                         improves performance, keeps execution
                                         realistic. Without filtering, creates
-                                        more orders than can be executed.
+                                        more orders than can be executed. This
+                                        feature can be toggled on/off in the
+                                        backtest configuration.
                                     </p>
                                 </div>
                             </div>
@@ -518,7 +520,7 @@ export default function HowBacktestWorksPage() {
                                         together get merged. This reduces order
                                         clutter and prevents creating too many
                                         small positions. This setting can be
-                                        disabled.
+                                        toggled on or off.
                                     </p>
                                 </div>
 
