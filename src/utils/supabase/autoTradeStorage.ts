@@ -13,10 +13,9 @@ import {
 } from "@/utils/zustand/autoTradeStore";
 import {
     TRADE_SYMBOL,
-    TRADING_ALGORITHM,
     UPDATE_AFTER_NEW_SPLIT_BATCH_SIZE,
 } from "@/auto-trade/constants";
-import { GRID_TRADE_V0_DEFAULT_CONFIG } from "@/utils/trading/algorithms/constants";
+import { GRID_TRADE_DEFAULT_CONFIG } from "@/utils/trading/algorithms/constants";
 import { supabase } from "@/utils/supabase/supabaseClient";
 import { fetchSplitsFromAlphaVantage } from "@/utils/alphavantage/splits";
 
@@ -138,24 +137,22 @@ export async function getAlgoConfigOrDefault(): Promise<{
             "capital_pct, buy_below_pct, sell_above_pct, buy_after_sell_pct, cash_floor, order_gap_pct"
         )
         .eq("symbol", TRADE_SYMBOL)
-        .eq("algorithm", TRADING_ALGORITHM)
         .maybeSingle();
 
     if (error) {
         console.error("[autoTradeStorage] Error fetching algo config", error);
-        return GRID_TRADE_V0_DEFAULT_CONFIG;
+        return GRID_TRADE_DEFAULT_CONFIG;
     }
 
     if (!data) {
         const insertResult = await supabase.from("at_algo_config").insert({
             symbol: TRADE_SYMBOL,
-            algorithm: TRADING_ALGORITHM,
-            capital_pct: GRID_TRADE_V0_DEFAULT_CONFIG.capitalPct,
-            buy_below_pct: GRID_TRADE_V0_DEFAULT_CONFIG.buyBelowPct,
-            sell_above_pct: GRID_TRADE_V0_DEFAULT_CONFIG.sellAbovePct,
-            buy_after_sell_pct: GRID_TRADE_V0_DEFAULT_CONFIG.buyAfterSellPct,
-            cash_floor: GRID_TRADE_V0_DEFAULT_CONFIG.cashFloor,
-            order_gap_pct: GRID_TRADE_V0_DEFAULT_CONFIG.orderGapPct,
+            capital_pct: GRID_TRADE_DEFAULT_CONFIG.capitalPct,
+            buy_below_pct: GRID_TRADE_DEFAULT_CONFIG.buyBelowPct,
+            sell_above_pct: GRID_TRADE_DEFAULT_CONFIG.sellAbovePct,
+            buy_after_sell_pct: GRID_TRADE_DEFAULT_CONFIG.buyAfterSellPct,
+            cash_floor: GRID_TRADE_DEFAULT_CONFIG.cashFloor,
+            order_gap_pct: GRID_TRADE_DEFAULT_CONFIG.orderGapPct,
         });
 
         if (insertResult.error) {
@@ -165,28 +162,28 @@ export async function getAlgoConfigOrDefault(): Promise<{
             );
         }
 
-        return GRID_TRADE_V0_DEFAULT_CONFIG;
+        return GRID_TRADE_DEFAULT_CONFIG;
     }
 
     return {
         capitalPct: Number(
-            data.capital_pct ?? GRID_TRADE_V0_DEFAULT_CONFIG.capitalPct
+            data.capital_pct ?? GRID_TRADE_DEFAULT_CONFIG.capitalPct
         ),
         buyBelowPct: Number(
-            data.buy_below_pct ?? GRID_TRADE_V0_DEFAULT_CONFIG.buyBelowPct
+            data.buy_below_pct ?? GRID_TRADE_DEFAULT_CONFIG.buyBelowPct
         ),
         sellAbovePct: Number(
-            data.sell_above_pct ?? GRID_TRADE_V0_DEFAULT_CONFIG.sellAbovePct
+            data.sell_above_pct ?? GRID_TRADE_DEFAULT_CONFIG.sellAbovePct
         ),
         buyAfterSellPct: Number(
             data.buy_after_sell_pct ??
-                GRID_TRADE_V0_DEFAULT_CONFIG.buyAfterSellPct
+                GRID_TRADE_DEFAULT_CONFIG.buyAfterSellPct
         ),
         cashFloor: Number(
-            data.cash_floor ?? GRID_TRADE_V0_DEFAULT_CONFIG.cashFloor
+            data.cash_floor ?? GRID_TRADE_DEFAULT_CONFIG.cashFloor
         ),
         orderGapPct: Number(
-            data.order_gap_pct ?? GRID_TRADE_V0_DEFAULT_CONFIG.orderGapPct
+            data.order_gap_pct ?? GRID_TRADE_DEFAULT_CONFIG.orderGapPct
         ),
     };
 }

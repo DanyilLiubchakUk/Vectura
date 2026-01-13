@@ -3,10 +3,9 @@ import {
     getIsAllowedToStart,
 } from "@/auto-trade/utils/date";
 import { checkAndRefreshSplits } from "@/auto-trade/utils/splitManager";
-import Ealgorighms from "@/utils/trading/algorithms/dictionary";
-import gridTradeV0 from "@/utils/trading/algorithms/gridTradeV0";
-import { TRADE_SYMBOL, TRADING_ALGORITHM } from "@/auto-trade/constants";
 import { getFilteredSnapshot } from "@/utils/alpaca/getTradingData";
+import gridTrade from "@/utils/trading/algorithms/gridTrade";
+import { TRADE_SYMBOL } from "@/auto-trade/constants";
 
 export default async function AutoTrade(now: string): Promise<{
     message: string;
@@ -43,21 +42,13 @@ export default async function AutoTrade(now: string): Promise<{
             success: false,
         };
     }
-    let algorithmMessage = "";
-    switch (TRADING_ALGORITHM) {
-        case Ealgorighms.GridV0:
-            algorithmMessage = await gridTradeV0(
-                TRADE_SYMBOL,
-                false,
-                data.price,
-                now
-            );
-            break;
 
-        default:
-            console.log("Passed unknown algorithm name");
-            break;
-    }
+    const algorithmMessage = await gridTrade(
+        TRADE_SYMBOL,
+        false,
+        data.price,
+        now
+    );
 
     return {
         message: algorithmMessage,

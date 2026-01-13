@@ -1,6 +1,7 @@
 import { SliderField } from "@/components/backtest/fields/slider-field";
 import { useFormContainer } from "@/contexts/form-container-context";
 import { MEDIA_QUERY_BREAKPOINTS } from "@/constants/media-queries";
+import { ToggleSliderField } from "../fields/toggle-slider-field";
 import { useElementSize } from "@/hooks/use-element-size";
 import { cn } from "@/lib/utils";
 import type { BacktestFormValues } from "@/components/backtest/schema";
@@ -31,6 +32,7 @@ export function StrategyFields({ control }: StrategyFieldsProps) {
                 min={0.1}
                 max={100}
                 step={0.1}
+                placeholder="60"
                 className={cn("col-span-12", colSpanClasses)}
             />
 
@@ -43,6 +45,7 @@ export function StrategyFields({ control }: StrategyFieldsProps) {
                 min={0.1}
                 max={100}
                 step={0.1}
+                placeholder="2"
                 className={cn("col-span-12", colSpanClasses)}
             />
 
@@ -55,6 +58,7 @@ export function StrategyFields({ control }: StrategyFieldsProps) {
                 min={0.1}
                 max={100}
                 step={0.1}
+                placeholder="18"
                 className={cn("col-span-12", colSpanClasses)}
             />
 
@@ -67,18 +71,21 @@ export function StrategyFields({ control }: StrategyFieldsProps) {
                 min={0.1}
                 max={100}
                 step={0.1}
+                placeholder="25"
                 className={cn("col-span-12", colSpanClasses)}
             />
 
             {/* Order Gap Percentage */}
-            <SliderField
+            <ToggleSliderField
+                toggleName="orderGapFilterEnabled"
                 name="orderGapPct"
                 control={control}
-                label="Order Gap % (-1 to disable)"
-                description="Percent gap to join orders. Use -1 to disable filtering"
-                min={-1}
+                label="Order Gap Filtering"
+                description="Percent gap to join orders"
+                min={0}
                 max={100}
                 step={0.1}
+                placeholder="1.5"
                 className={cn("col-span-12", colSpanClasses)}
             />
         </>

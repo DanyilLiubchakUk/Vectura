@@ -5,19 +5,19 @@ import {
     addSellOrder,
 } from "@/utils/trading/tradeRouter";
 import {
-    GRID_TRADE_V0_DEFAULT_CONFIG,
-    IgridV0,
+    GRID_TRADE_DEFAULT_CONFIG,
+    Igrid,
 } from "@/utils/trading/algorithms/constants";
 import { PriceCollector } from "@/backtest/core/price-collector";
 import { OrderTracker } from "@/backtest/core/order-tracker";
 import type { MetricsTracker } from "@/backtest/core/metrics-tracker";
 
-export default async function gridTradeV0(
+export default async function gridTrade(
     stock: string,
     backtesting: boolean = false,
     currentPrice: number,
     time: string,
-    configOverrides?: IgridV0,
+    configOverrides?: Igrid,
     orderTracker?: OrderTracker,
     priceCollector?: PriceCollector,
     metricsTracker?: MetricsTracker
@@ -28,7 +28,7 @@ export default async function gridTradeV0(
     await updateEquity(backtesting, currentPrice, time, priceCollector);
 
     const config = backtesting
-        ? { ...GRID_TRADE_V0_DEFAULT_CONFIG, ...configOverrides }
+        ? { ...GRID_TRADE_DEFAULT_CONFIG, ...configOverrides }
         : await (
             await import(
                   /* webpackIgnore: true */ "@/utils/supabase/autoTradeStorage"

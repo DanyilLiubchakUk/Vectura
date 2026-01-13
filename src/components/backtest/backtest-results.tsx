@@ -180,21 +180,9 @@ export function BacktestResults({ result, runId }: {
                                     <table className="w-full">
                                         <tbody>
                                             <MetricTableRow
-                                                label="Stock"
-                                                description="The stock symbol that was backtested."
-                                                value={result.stock}
-                                                containerRef={cardRef}
-                                            />
-                                            <MetricTableRow
                                                 label="Execution Time"
                                                 description="The total time taken to execute the backtest."
                                                 value={result.executionTime}
-                                                containerRef={cardRef}
-                                            />
-                                            <MetricTableRow
-                                                label="Backtest Period"
-                                                description="Start and end date of the backtest"
-                                                value={`${formatDate(result.startDate)} - ${formatDate(result.endDate)}`}
                                                 containerRef={cardRef}
                                             />
                                             <MetricTableRow
@@ -215,6 +203,12 @@ export function BacktestResults({ result, runId }: {
                                                         label="Avg Trades/Month"
                                                         description="Average number of executed trades per month over the backtest period."
                                                         value={`${metrics.averageTradesPerMonth.toFixed(1)}/month`}
+                                                        containerRef={cardRef}
+                                                    />
+                                                    <MetricTableRow
+                                                        label="Longest Drawdown"
+                                                        description="Longest continuous period where equity stayed below its previous peak."
+                                                        value={`${metrics.longestDrawdownDurationDays.toFixed(0)} days`}
                                                         containerRef={cardRef}
                                                     />
                                                 </>
@@ -344,12 +338,6 @@ export function BacktestResults({ result, runId }: {
                                                     value={metrics.returnMaxDrawdownRatio.toFixed(2)}
                                                     containerRef={cardRef}
                                                     descriptionBreakpoint="MD"
-                                                />
-                                                <MetricTableRow
-                                                    label="Longest Drawdown"
-                                                    description="Longest continuous period where equity stayed below its previous peak."
-                                                    value={`${metrics.longestDrawdownDurationDays.toFixed(0)} days`}
-                                                    containerRef={cardRef}
                                                 />
                                             </tbody>
                                         </table>

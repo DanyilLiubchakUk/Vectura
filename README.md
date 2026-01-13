@@ -131,7 +131,7 @@ The `/ranges` page allows you to manage historical stock data ranges stored in t
 
 1. Navigate to `/backtest` page
 2. Select execution mode: **Local** (runs on your machine) or **Cloud** (AWS Lambda)
-3. Fill in backtest parameters (stock, algorithm, date range, capital)
+3. Fill in backtest parameters (stock, date range, capital)
 4. Click "Run Backtest" and watch real-time progress
 5. You can run multiple backtests in parallel - each will execute independently in either mode
 
@@ -140,7 +140,7 @@ The `/ranges` page allows you to manage historical stock data ranges stored in t
 ```bash
 npm run backtest
 # Follow prompts or provide arguments(optional):
-# npm run backtest TQQQ GridV0 2024-01-01 2024-12-31 1000 7 500
+# npm run backtest TQQQ 2024-01-01 2024-12-31 1000 7 500
 ```
 
 **Cloud Mode Setup:**
@@ -271,7 +271,6 @@ CREATE INDEX IF NOT EXISTS idx_at_open_trades ON public.at_open_trades (id, time
 
 CREATE TABLE IF NOT EXISTS public.at_algo_config (
   symbol text NOT NULL,
-  algorithm text NOT NULL,
   capital_pct numeric NOT NULL, -- percentage of capital to use per buy
   buy_below_pct numeric NOT NULL, -- percentage below current price to set next buy
   sell_above_pct numeric NOT NULL, -- percentage above buy price to set sell
@@ -279,6 +278,6 @@ CREATE TABLE IF NOT EXISTS public.at_algo_config (
   cash_floor numeric NOT NULL, -- minimum cash floor that should remain in account
   order_gap_pct numeric NOT NULL, -- percent gap to join orders (N %), use -1 to disable filtering
   updated_at timestamptz DEFAULT now(),
-  PRIMARY KEY (symbol, algorithm)
+  PRIMARY KEY (symbol)
 );
 ```
