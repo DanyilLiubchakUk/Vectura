@@ -47,13 +47,14 @@ export function BacktestEditDialog({ runId }: { runId: string }) {
         startDate: run.config.startDate,
         endDate: run.config.endDate,
         startCapital: run.config.startCapital,
-        contributionFrequencyDays: run.config.contributionFrequencyDays,
-        contributionAmount: run.config.contributionAmount,
+        contributionFrequencyDays: run.config.contributionFrequencyDays ?? 0,
+        contributionAmount: run.config.contributionAmount ?? 0,
         capitalPct: run.config.capitalPct,
         buyBelowPct: run.config.buyBelowPct,
         sellAbovePct: run.config.sellAbovePct,
         buyAfterSellPct: run.config.buyAfterSellPct,
         cashFloor: run.config.cashFloor,
+        orderGapFilterEnabled: run.config.orderGapFilterEnabled,
         orderGapPct: run.config.orderGapPct,
     };
 
