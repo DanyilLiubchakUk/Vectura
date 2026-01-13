@@ -14,12 +14,14 @@ import { MEDIA_QUERY_BREAKPOINTS } from "@/constants/media-queries";
 import { useElementSize } from "@/hooks/use-element-size";
 import { InfoIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import React from "react";
 import type { Control, FieldPath, FieldValues } from "react-hook-form";
 
 interface FormFieldWithTooltipProps<T extends FieldValues> {
     name: FieldPath<T>;
     control: Control<T>;
     label: string;
+    switchComponent?: React.ReactNode | null;
     description?: string;
     className?: string;
     children: React.ReactNode;
@@ -28,6 +30,7 @@ interface FormFieldWithTooltipProps<T extends FieldValues> {
 
 export function FormFieldWithTooltip<T extends FieldValues>({
     label,
+    switchComponent: SwitchComponent = null,
     description,
     className,
     children,
@@ -66,6 +69,7 @@ export function FormFieldWithTooltip<T extends FieldValues>({
     return (
         <FormItem className={className}>
             <div className="flex items-center gap-2">
+                {SwitchComponent && SwitchComponent}
                 <FormLabel className="flex items-center gap-2">
                     {label}
                 </FormLabel>

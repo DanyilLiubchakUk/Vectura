@@ -53,11 +53,24 @@ export const backtestFormSchema = z
             .gt(0, "Buy after sell percentage must be grater that 0%")
             .max(100, "Buy after sell percentage cannot exceed 100%"),
         cashFloor: z.coerce.number().min(0, "Cash floor cannot be negative"),
-        orderGapPct: z.coerce
-            .number()
-            .min(-1, "Order gap percentage must be at least -1")
-            .max(100, "Order gap percentage cannot exceed 100%"),
+        orderGapFilterEnabled: z.boolean().default(true),
+        orderGapPct: z.coerce.number(),
     })
+    .refine(
+        (data) => {
+            if (data.orderGapFilterEnabled) {
+                return (
+                    data.orderGapPct >= 0 &&
+                    data.orderGapPct <= 100
+                );
+            }
+            return true;
+        },
+        {
+            message: "Order gap percentage must be between 0% and 100%",
+            path: ["orderGapPct"],
+        }
+    )
     .refine(
         (data) => {
             const freq =

@@ -6,16 +6,19 @@ import { useElementSize } from "@/hooks/use-element-size";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import React from "react";
 import type { Control, FieldPath, FieldValues } from "react-hook-form";
 
 interface SliderFieldProps<T extends FieldValues> {
     name: FieldPath<T>;
     control: Control<T>;
+    switchComponent?: React.ReactNode | null;
     label: string;
     description?: string;
     min: number;
     max: number;
     step?: number;
+    disabled?: boolean;
     className?: string;
 }
 
@@ -23,10 +26,12 @@ export function SliderField<T extends FieldValues>({
     name,
     control,
     label,
+    switchComponent = null,
     description,
     min,
     max,
     step = 0.1,
+    disabled = false,
     className,
 }: SliderFieldProps<T>) {
     const containerRef = useFormContainer();
@@ -66,6 +71,7 @@ export function SliderField<T extends FieldValues>({
             render={({ field, fieldState }) => (
                 <FormFieldWithTooltip
                     label={label}
+                    switchComponent={switchComponent}
                     description={description}
                     className={className}
                     hasError={!!fieldState.error}
@@ -84,6 +90,7 @@ export function SliderField<T extends FieldValues>({
                                     max={max}
                                     step={step}
                                     className="w-20"
+                                    disabled={disabled}
                                     {...field}
                                     onChange={(e) =>
                                         field.onChange(Number(e.target.value))
@@ -101,16 +108,19 @@ export function SliderField<T extends FieldValues>({
                                 </FormDescription>
                             )}
                         </div>
-                        <Slider
-                            min={min}
-                            max={max}
-                            step={step}
-                            value={[field.value]}
-                            onValueChange={(values) =>
-                                field.onChange(values[0])
-                            }
-                            className="flex-1"
-                        />
+                        <div className="w-full">
+                            <Slider
+                                min={min}
+                                max={max}
+                                step={step}
+                                value={[field.value]}
+                                onValueChange={(values) =>
+                                    field.onChange(values[0])
+                                }
+                                disabled={disabled}
+                                className="w-full"
+                            />
+                        </div>
                     </div>
                 </FormFieldWithTooltip>
             )}

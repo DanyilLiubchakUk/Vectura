@@ -49,6 +49,7 @@ function BacktestRunExecutorItem({ runId }: { runId: string }) {
             sellAbovePct: run.config.sellAbovePct,
             buyAfterSellPct: run.config.buyAfterSellPct,
             cashFloor: run.config.cashFloor,
+            orderGapFilterEnabled: run.config.orderGapFilterEnabled,
             orderGapPct: run.config.orderGapPct,
         };
 

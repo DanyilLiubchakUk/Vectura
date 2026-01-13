@@ -17,6 +17,7 @@ export const defaultBacktestFormValues: BacktestFormValues = {
     sellAbovePct: GRID_TRADE_DEFAULT_CONFIG.sellAbovePct,
     buyAfterSellPct: GRID_TRADE_DEFAULT_CONFIG.buyAfterSellPct,
     cashFloor: GRID_TRADE_DEFAULT_CONFIG.cashFloor,
+    orderGapFilterEnabled: true,
     orderGapPct: GRID_TRADE_DEFAULT_CONFIG.orderGapPct,
 };
 

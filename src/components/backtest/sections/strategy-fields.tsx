@@ -1,6 +1,7 @@
 import { SliderField } from "@/components/backtest/fields/slider-field";
 import { useFormContainer } from "@/contexts/form-container-context";
 import { MEDIA_QUERY_BREAKPOINTS } from "@/constants/media-queries";
+import { ToggleSliderField } from "../fields/toggle-slider-field";
 import { useElementSize } from "@/hooks/use-element-size";
 import { cn } from "@/lib/utils";
 import type { BacktestFormValues } from "@/components/backtest/schema";
@@ -71,12 +72,13 @@ export function StrategyFields({ control }: StrategyFieldsProps) {
             />
 
             {/* Order Gap Percentage */}
-            <SliderField
+            <ToggleSliderField
+                toggleName="orderGapFilterEnabled"
                 name="orderGapPct"
                 control={control}
-                label="Order Gap % (-1 to disable)"
-                description="Percent gap to join orders. Use -1 to disable filtering"
-                min={-1}
+                label="Order Gap Filtering"
+                description="Percent gap to join orders"
+                min={0}
                 max={100}
                 step={0.1}
                 className={cn("col-span-12", colSpanClasses)}

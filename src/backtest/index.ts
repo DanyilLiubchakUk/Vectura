@@ -58,7 +58,7 @@ function isNonNegativeNumber(n: number) {
 
 function isOrderGapRange(n: number) {
     const num = Number(n);
-    return !isNaN(num) && num >= -1 && num <= 100;
+    return !isNaN(num) && num >= 0 && num <= 100;
 }
 
 async function getArguments() {
@@ -175,12 +175,21 @@ async function getArguments() {
                         await askQuestion(`Enter cash floor in dollars (>=0): `)
                     ) || defaultArgs.cashFloor;
             } while (!isNonNegativeNumber(cashFloor));
-            do {
-                orderGapPct =
-                    Number(
-                        await askQuestion(`Enter order gap % (-1 to 100): `)
-                    ) || defaultArgs.orderGapPct;
-            } while (!isOrderGapRange(orderGapPct));
+            const enableFiltering = (
+                await askQuestion(`Enable order gap filtering? (Y/n): `)
+            )
+                .trim()
+                .toLowerCase();
+            if (enableFiltering === "" || enableFiltering === "y" || enableFiltering === "yes") {
+                do {
+                    orderGapPct =
+                        Number(
+                            await askQuestion(`Enter order gap % (0 to 100): `)
+                        ) || defaultArgs.orderGapPct;
+                } while (!isOrderGapRange(orderGapPct));
+            } else {
+                orderGapPct = -1;
+            }
             const modeAnswer =
                 (await askQuestion(
                     `Execution mode (local/cloud) [${defaultArgs.executionMode}]: `
@@ -306,13 +315,24 @@ async function getArguments() {
             } while (!isNonNegativeNumber(cashFloor));
             needPrompt = true;
         }
-        if (!isOrderGapRange(orderGapPct)) {
-            do {
-                orderGapPct =
-                    Number(
-                        await askQuestion(`Enter order gap % (-1 to 100): `)
-                    ) || defaultArgs.orderGapPct;
-            } while (!isOrderGapRange(orderGapPct));
+        if (orderGapPct === -1) {
+            // Filtering is disabled, this is valid
+        } else if (!isOrderGapRange(orderGapPct)) {
+            const enableFiltering = (
+                await askQuestion(`Enable order gap filtering? (Y/n): `)
+            )
+                .trim()
+                .toLowerCase();
+            if (enableFiltering === "" || enableFiltering === "y" || enableFiltering === "yes") {
+                do {
+                    orderGapPct =
+                        Number(
+                            await askQuestion(`Enter order gap % (0 to 100): `)
+                        ) || defaultArgs.orderGapPct;
+                } while (!isOrderGapRange(orderGapPct));
+            } else {
+                orderGapPct = -1;
+            }
             needPrompt = true;
         }
         if (executionMode !== "local" && executionMode !== "cloud") {
@@ -405,6 +425,7 @@ async function getArguments() {
         sellAbovePct,
         buyAfterSellPct,
         cashFloor,
+        orderGapFilterEnabled: orderGapPct !== -1,
         orderGapPct,
     };
 

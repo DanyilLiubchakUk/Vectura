@@ -34,7 +34,9 @@ export function BacktestConfigDisplay({ config }: { config: BacktestConfig }) {
                 : null,
             `Start capital: $${config.startCapital}`,
             `Cash floor: $${config.cashFloor}`,
-            `Join gap: ${formatPercent(config.orderGapPct)}`,
+            (config.orderGapFilterEnabled === false || (config.orderGapFilterEnabled === undefined && config.orderGapPct === -1))
+                ? "Join gap: Disabled"
+                : `Join gap: ${formatPercent(config.orderGapPct)}`,
         ];
 
         return items.filter((item): item is string => item !== null);

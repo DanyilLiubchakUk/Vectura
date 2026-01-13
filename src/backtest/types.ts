@@ -129,6 +129,7 @@ export interface BacktestConfig {
     sellAbovePct: number;
     buyAfterSellPct: number;
     cashFloor: number;
+    orderGapFilterEnabled: boolean;
     orderGapPct: number;
 }
 

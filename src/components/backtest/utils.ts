@@ -6,6 +6,10 @@ export function prepareBacktestSubmissionData(
     const freq = values.contributionFrequencyDays ?? 0;
     const amount = values.contributionAmount ?? 0;
 
+    const orderGapPct = values.orderGapFilterEnabled === false
+        ? -1
+        : values.orderGapPct;
+
     return {
         stock: values.stock.toUpperCase(),
         startDate: values.startDate,
@@ -18,7 +22,7 @@ export function prepareBacktestSubmissionData(
         sellAbovePct: values.sellAbovePct,
         buyAfterSellPct: values.buyAfterSellPct,
         cashFloor: values.cashFloor,
-        orderGapPct: values.orderGapPct,
+        orderGapPct,
     };
 }
 

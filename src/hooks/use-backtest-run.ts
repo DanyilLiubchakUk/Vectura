@@ -27,7 +27,10 @@ export function useBacktestRun(runId: string) {
                 sellAbovePct: values.sellAbovePct,
                 buyAfterSellPct: values.buyAfterSellPct,
                 cashFloor: values.cashFloor,
-                orderGapPct: values.orderGapPct,
+                orderGapFilterEnabled: values.orderGapFilterEnabled,
+                orderGapPct: values.orderGapFilterEnabled === false
+                    ? -1
+                    : values.orderGapPct
             };
 
             // Cancel existing run if it's running

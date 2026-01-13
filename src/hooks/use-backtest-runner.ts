@@ -21,7 +21,10 @@ export function useBacktestRunner() {
                 sellAbovePct: values.sellAbovePct,
                 buyAfterSellPct: values.buyAfterSellPct,
                 cashFloor: values.cashFloor,
-                orderGapPct: values.orderGapPct,
+                orderGapFilterEnabled: values.orderGapFilterEnabled,
+                orderGapPct: values.orderGapFilterEnabled === false
+                    ? -1
+                    : values.orderGapPct,
             };
 
             const runId = addRun(values.name || "Untitled Backtest", config);
