@@ -24,7 +24,7 @@ export async function calculateBacktestResult(
     const investedCash = (state.capital?.investedCash || 0) + config.startCapital
     const totalReturn = finalEquity - investedCash;
     const totalReturnPercent =
-        config.startCapital > 0 ? ((finalEquity / investedCash) * 100) - 100 : 0;
+        investedCash > 0 ? ((finalEquity / investedCash) * 100) - 100 : 0;
 
     // Generate chart data
     let chartData: BacktestResult['chartData'];
