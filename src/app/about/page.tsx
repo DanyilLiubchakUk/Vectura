@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { AppHeader } from "@/components/layout/app-header";
 import { PageNav } from "@/components/layout/page-nav";
 import { useTheme } from "@/components/theme-provider";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 
 export default function AboutPage() {
@@ -27,12 +27,11 @@ export default function AboutPage() {
     const urlFromId = (id: string) => {
         return `https://utfs.io/a/vx037ud6ao/${id}`;
     };
-    const algorithmDyingImage =
-        mounted && theme === "dark" ? algorithmDyingDark : algorithmDyingLight;
-    const actionsCompoundImage =
-        mounted && theme === "dark"
-            ? actionsCompoundDark
-            : actionsCompoundLight;
+
+    const imageUrls = useMemo(() => ({
+        algorithmDying: mounted && theme === "dark" ? algorithmDyingDark : algorithmDyingLight,
+        actionsCompound: mounted && theme === "dark" ? actionsCompoundDark : actionsCompoundLight,
+    }), [mounted, theme]);
 
     return (
         <div className="min-h-screen flex flex-col">
@@ -138,11 +137,10 @@ export default function AboutPage() {
                             <div className="my-6 md:my-8">
                                 <div className="relative aspect-video rounded-lg overflow-hidden">
                                     <Image
-                                        src={urlFromId(algorithmDyingImage)}
+                                        src={urlFromId(imageUrls.algorithmDying)}
                                         alt="Algorithm Dying: Top shows algorithm sells once and becomes inactive. Bottom shows buying after sell allows the grid to follow the trend and remain active."
                                         fill
                                         className="object-contain"
-                                        unoptimized
                                     />
                                 </div>
                                 <p className="text-xs md:text-sm text-muted-foreground mt-2 text-center">
@@ -285,11 +283,10 @@ export default function AboutPage() {
                             <div className="my-6 md:my-8">
                                 <div className="relative aspect-video rounded-lg overflow-hidden">
                                     <Image
-                                        src={urlFromId(actionsCompoundImage)}
+                                        src={urlFromId(imageUrls.actionsCompound)}
                                         alt="Actions Compound: Top shows unfiltered buy actions compound and overload the system. Bottom shows filtered clusters keep only meaningful levels."
                                         fill
                                         className="object-contain"
-                                        unoptimized
                                     />
                                 </div>
                                 <p className="text-xs md:text-sm text-muted-foreground mt-2 text-center">
