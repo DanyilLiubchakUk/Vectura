@@ -15,8 +15,7 @@ export function PageNav({ previousLink, nextLink }: PageNavProps) {
             {previousLink ? (
                 <Link
                     href={previousLink.href}
-                    className="flex-1 [&:hover_button]:bg-muted [&:hover_button]:text-accent-foreground
-"
+                    className="flex-1 [&:hover_button]:bg-muted [&:hover_button]:text-accent-foreground"
                 >
                     <Button variant="outline" className="w-full">
                         <ArrowLeft className="mr-2 h-4 w-4" />
