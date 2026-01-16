@@ -11,8 +11,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL!),
     title: "Vectura",
     description: "Trading strategy backtesting platform",
+    alternates: {
+        canonical: '/',
+    },
     verification: {
         google: "dMPN-Z0Fn7EY5GBdO1gUZ-zhPG-ivAWogBx5n-zIIuU",
     },
