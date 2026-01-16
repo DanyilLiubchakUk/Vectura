@@ -53,6 +53,9 @@ export const metadata: Metadata = {
     alternates: {
         canonical: '/',
     },
+    appleWebApp: {
+        title: 'Vectura',
+    },
     verification: {
         google: "dMPN-Z0Fn7EY5GBdO1gUZ-zhPG-ivAWogBx5n-zIIuU",
     },
