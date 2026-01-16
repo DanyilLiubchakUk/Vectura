@@ -13,6 +13,9 @@ const inter = Inter({
 export const metadata: Metadata = {
     title: "Vectura",
     description: "Trading strategy backtesting platform",
+    verification: {
+        google: "dMPN-Z0Fn7EY5GBdO1gUZ-zhPG-ivAWogBx5n-zIIuU",
+    },
 };
 
 export default function RootLayout({
