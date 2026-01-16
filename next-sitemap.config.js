@@ -11,5 +11,17 @@ module.exports = {
       },
     ],
   },
-  exclude: ['/api/*'],
+  exclude: [
+    '/api/*',
+    '/*.png',
+    '/*.jpg',
+    '/*.jpeg',
+    '/*.gif',
+    '/*.svg',
+    '/*.ico',
+    '/*.webp',
+    '/manifest.webmanifest',
+  ],
+  sitemapSize: 5000,
+  generateIndexSitemap: false,
 };
