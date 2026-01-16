@@ -7,11 +7,113 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlertTriangle, CheckCircle2, HardDrive, Cloud } from "lucide-react";
 import { CheckListItem } from "@/components/ui/check-list-item";
 import { PageHeader } from "@/components/layout/page-header";
 import { AppHeader } from "@/components/layout/app-header";
 import { PageNav } from "@/components/layout/page-nav";
+
+const faqSchema = [
+    {
+        "@type": "Question",
+        "name": "What is backtesting?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Backtesting is the process of testing a trading strategy using historical data to determine its viability. It helps traders evaluate the effectiveness of their strategies before risking real capital."
+        }
+    },
+    {
+        "@type": "Question",
+        "name": "How does Vectura's backtesting engine work?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Vectura simulates a grid trading strategy using real historical market data, minute-by-minute prices adjusted for stock splits. It processes prices sequentially, creating buy and sell orders dynamically based on execution and predefined percentage distances."
+        }
+    },
+    {
+        "@type": "Question",
+        "name": "What is the difference between Local and Cloud Mode?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Local Mode runs the backtest on your machine and is recommended for most users. If your local computer is too slow or cannot complete the test, you can use Cloud Mode (runs on AWS Lambda) instead."
+        }
+    },
+    {
+        "@type": "Question",
+        "name": "Why should I observe behavior, not just returns, in backtesting?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Observing behavior (inactivity periods, drawdowns, capital utilization) provides a deeper understanding of the strategy's effectiveness and risks. Focusing solely on final returns can lead to misunderstandings and unrealistic expectations."
+        }
+    },
+    {
+        "@type": "Question",
+        "name": "How reliable is the historical data used in backtests?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Vectura uses Alpaca API for minute-by-minute price data and AlphaVantage API for stock splits. The data is real historical market prices, not simulated or smoothed. Stock splits are automatically adjusted to ensure accurate price continuity."
+        }
+    },
+    {
+        "@type": "Question",
+        "name": "What does the contribution system do?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The contribution system allows you to simulate dollar-cost averaging by adding cash to your account at regular intervals (e.g., $100 every 7 days). This prevents the strategy from becoming inactive during prolonged downturns and enables continued buying at discounted prices."
+        }
+    },
+    {
+        "@type": "Question",
+        "name": "How should I interpret backtest results?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Focus on behavior patterns rather than final returns: look at how often the strategy trades, how long it stays inactive, maximum drawdowns, and capital utilization. A good strategy shows consistent activity, reasonable drawdowns, and efficient use of capital across different market conditions."
+        }
+    },
+];
+
+const faqPageSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faqSchema.map(item => ({
+        "@type": "Question",
+        "name": item.name,
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": item.acceptedAnswer.text
+        }
+    }))
+};
+
+const howToSchema = {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "How to Use the Backtest",
+    "description": "Step-by-step guide to configuring and running a trading strategy backtest on Vectura.",
+    "step": [
+        {
+            "@type": "HowToStep",
+            "name": "Configure Parameters",
+            "text": "Fill in the backtest form with your strategy parameters: Stock symbol, Date range, Starting capital, Algorithm parameters, and Contribution schedule (optional)."
+        },
+        {
+            "@type": "HowToStep",
+            "name": "Choose Execution Mode",
+            "text": "Local Mode runs the backtest on your machine and is recommended for most users. If your local computer is too slow or cannot complete the test, you can use Cloud Mode (runs on AWS Lambda) instead."
+        },
+        {
+            "@type": "HowToStep",
+            "name": "Watch Progress",
+            "text": "Monitor real-time progress as the backtest runs, including download progress, days remaining."
+        },
+        {
+            "@type": "HowToStep",
+            "name": "Analyze Results",
+            "text": "After the backtest completes, review the results to understand your strategy's behavior, inactivity periods, and drawdowns."
+        }
+    ]
+};
 
 export default function HowBacktestWorksPage() {
     return (
@@ -588,6 +690,34 @@ export default function HowBacktestWorksPage() {
                                 </p>
                             </div>
                         </section>
+
+                        <section className="space-y-3">
+                            <h2 className="text-xl md:text-2xl font-bold">
+                                Frequently Asked Questions
+                            </h2>
+                            <Accordion type="single" collapsible className="w-full">
+                                {faqSchema.map((faq, index) => (
+                                    <AccordionItem key={index} value={`item-${index + 1}`}>
+                                        <AccordionTrigger>{faq.name}</AccordionTrigger>
+                                        <AccordionContent>{faq.acceptedAnswer.text}</AccordionContent>
+                                    </AccordionItem>
+                                ))}
+                            </Accordion>
+                        </section>
+
+                        <script
+                            type="application/ld+json"
+                            dangerouslySetInnerHTML={{
+                                __html: JSON.stringify(faqPageSchema),
+                            }}
+                        />
+                        <script
+                            type="application/ld+json"
+                            dangerouslySetInnerHTML={{
+                                __html: JSON.stringify(howToSchema),
+                            }}
+                        />
+
                     </article>
 
                     <PageNav

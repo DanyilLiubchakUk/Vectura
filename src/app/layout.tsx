@@ -93,12 +93,52 @@ export default function RootLayout({
 }: {
     children: React.ReactNode;
 }) {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebSite",
+                "@id": `${siteUrl}/#website`,
+                name: "Vectura",
+                url: siteUrl,
+                description: "Trading strategy backtesting platform",
+                inLanguage: "en-US",
+            },
+            {
+                "@type": "Organization",
+                "@id": `${siteUrl}/#organization`,
+                name: "Vectura",
+                url: siteUrl,
+                logo: `${siteUrl}/icon.svg`,
+            },
+            {
+                "@type": "SoftwareApplication",
+                "@id": `${siteUrl}/#software-application`,
+                name: "Vectura",
+                operatingSystem: "Any",
+                applicationCategory: "FinanceApplication",
+                offers: {
+                    "@type": "Offer",
+                    price: "0",
+                    priceCurrency: "USD",
+                },
+            },
+        ],
+    };
+
     return (
         <html
             lang="en"
             className={cn("h-full", inter.variable)}
             suppressHydrationWarning
         >
+            <head>
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                />
+            </head>
             <body
                 className={cn(
                     "min-h-full bg-background text-foreground antialiased"
