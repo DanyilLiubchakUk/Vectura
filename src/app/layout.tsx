@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
+import Script from "next/script";
 import "./globals.css";
 
 const inter = Inter({
@@ -133,12 +134,6 @@ export default function RootLayout({
             className={cn("h-full", inter.variable)}
             suppressHydrationWarning
         >
-            <head>
-                <script
-                    type="application/ld+json"
-                    dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-                />
-            </head>
             <body
                 className={cn(
                     "min-h-full bg-background text-foreground antialiased"
@@ -147,6 +142,12 @@ export default function RootLayout({
                 <ThemeProvider defaultTheme="system" storageKey="vectura-theme">
                     {children}
                 </ThemeProvider>
+                <Script
+                    id="json-ld"
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                    strategy="lazyOnload"
+                />
             </body>
         </html>
     );

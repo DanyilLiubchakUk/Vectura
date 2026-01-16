@@ -8,6 +8,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import Script from "next/script";
 import { AlertTriangle, CheckCircle2, HardDrive, Cloud } from "lucide-react";
 import { CheckListItem } from "@/components/ui/check-list-item";
 import { PageHeader } from "@/components/layout/page-header";
@@ -704,21 +705,24 @@ export default function HowBacktestWorksPage() {
                                 ))}
                             </Accordion>
                         </section>
-
-                        <script
-                            type="application/ld+json"
-                            dangerouslySetInnerHTML={{
-                                __html: JSON.stringify(faqPageSchema),
-                            }}
-                        />
-                        <script
-                            type="application/ld+json"
-                            dangerouslySetInnerHTML={{
-                                __html: JSON.stringify(howToSchema),
-                            }}
-                        />
-
                     </article>
+
+                    <Script
+                        id="faq-schema"
+                        type="application/ld+json"
+                        dangerouslySetInnerHTML={{
+                            __html: JSON.stringify(faqPageSchema),
+                        }}
+                        strategy="lazyOnload"
+                    />
+                    <Script
+                        id="howto-schema"
+                        type="application/ld+json"
+                        dangerouslySetInnerHTML={{
+                            __html: JSON.stringify(howToSchema),
+                        }}
+                        strategy="lazyOnload"
+                    />
 
                     <PageNav
                         previousLink={{
