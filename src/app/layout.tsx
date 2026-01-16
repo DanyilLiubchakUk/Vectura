@@ -55,6 +55,32 @@ export const metadata: Metadata = {
     verification: {
         google: "dMPN-Z0Fn7EY5GBdO1gUZ-zhPG-ivAWogBx5n-zIIuU",
     },
+    openGraph: {
+        title: "Vectura - Trading Strategy Backtesting Platform",
+        description: "Simulate and analyze your trading strategies with historical market data.",
+        url: '/',
+        siteName: "Vectura",
+        locale: 'en_US',
+        type: 'website',
+        images: [
+            {
+                url: '/images/social/default-og-image.png',
+                width: 1200,
+                height: 630,
+                alt: "Vectura - Trading Strategy Backtesting Platform",
+                type: 'image/png',
+            },
+        ],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        site: '@vectura_app',
+        creator: '@vectura_app',
+        title: "Vectura - Trading Strategy Backtesting Platform",
+        description: "Simulate and analyze your trading strategies with historical market data.",
+        images: ['/images/social/default-og-image.png'],
+
+    },
 };
 
 export const viewport = {
