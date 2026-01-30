@@ -10,7 +10,7 @@ export interface ChartThemeColors {
 }
 
 const lightThemeColors: ChartThemeColors = {
-    background: "#ffffff",
+    background: "#fffbf9",
     text: "#292524", //stone-800
     grid: "#e4e4e7",
     priceLine: "#292524", //stone-800
@@ -21,7 +21,7 @@ const lightThemeColors: ChartThemeColors = {
 };
 
 const darkThemeColors: ChartThemeColors = {
-    background: "#18181b",
+    background: "#1f1917",
     text: "#d6d3d1", //stone-300
     grid: "#ffffff1a",
     priceLine: "#d6d3d1", //stone-300

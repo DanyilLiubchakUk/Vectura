@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import { SparksCanvas } from "@/components/sparks/SparksCanvas";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
 import Script from "next/script";
+import type { Metadata } from "next";
 import "./globals.css";
 
 const inter = Inter({
@@ -143,6 +144,7 @@ export default function RootLayout({
                 )}
             >
                 <ThemeProvider defaultTheme="system" storageKey="vectura-theme">
+                    <SparksCanvas />
                     {children}
                 </ThemeProvider>
                 <Script

@@ -233,7 +233,7 @@ export default function HowBacktestWorksPage() {
                                 </CardHeader>
                                 <CardContent className="space-y-3">
                                     <div className="space-y-3">
-                                        <div className="p-4 rounded-lg border bg-muted/50">
+                                        <div className="p-4 rounded-lg border bg-card/75">
                                             <div className="flex items-center gap-2 mb-2">
                                                 <HardDrive className="h-4 w-4 text-primary" />
                                                 <h3 className="font-semibold">
@@ -260,7 +260,7 @@ export default function HowBacktestWorksPage() {
                                             </ul>
                                         </div>
 
-                                        <div className="p-4 rounded-lg border bg-muted/50">
+                                        <div className="p-4 rounded-lg border bg-card/75">
                                             <div className="flex items-center gap-2 mb-2">
                                                 <Cloud className="h-4 w-4 text-primary" />
                                                 <h3 className="font-semibold">
@@ -519,7 +519,7 @@ export default function HowBacktestWorksPage() {
                                 Important Edge Cases
                             </h2>
 
-                            <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-900">
+                            <Card className="border-amber-200 dark:border-amber-900 bg-amber-100/55 dark:bg-amber-950/45">
                                 <CardHeader>
                                     <div className="flex items-center gap-2">
                                         <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500" />
@@ -541,7 +541,7 @@ export default function HowBacktestWorksPage() {
                                         selling shares and freeing cash can new
                                         buys occur.
                                     </p>
-                                    <div className="p-3 rounded-lg bg-yellow-100 dark:bg-yellow-950/40 border border-yellow-200 dark:border-yellow-900">
+                                    <div className="p-3 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-100/65 dark:bg-amber-950/55">
                                         <p className="text-xs font-semibold mb-1">
                                             Example: Post-COVID Recovery
                                         </p>
@@ -559,7 +559,7 @@ export default function HowBacktestWorksPage() {
                                 </CardContent>
                             </Card>
 
-                            <Card className="border-green-200 bg-green-50/50 dark:bg-green-950/20 dark:border-green-900">
+                            <Card className="border-green-200 dark:border-green-900 bg-green-100/55 dark:bg-green-950/45">
                                 <CardHeader>
                                     <div className="flex items-center gap-2">
                                         <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-500" />
@@ -580,7 +580,7 @@ export default function HowBacktestWorksPage() {
                                         were previously blocked and simulates
                                         dollar-cost averaging.
                                     </p>
-                                    <div className="p-3 rounded-lg bg-green-100 dark:bg-green-950/40 border border-green-200 dark:border-green-900">
+                                    <div className="p-3 rounded-lg border border-green-200 dark:border-green-900 bg-green-100/65 dark:bg-green-950/55 ">
                                         <p className="text-xs font-semibold mb-1">
                                             With Contributions
                                         </p>
@@ -647,22 +647,22 @@ export default function HowBacktestWorksPage() {
                             <h2 className="text-xl md:text-2xl font-bold">
                                 How to Use This Backtest Properly
                             </h2>
-                            <Card className="border-primary/20 bg-primary/5">
+                            <Card>
                                 <CardContent>
                                     <ul className="space-y-3 text-sm text-muted-foreground">
-                                        <CheckListItem variant="primary">
+                                        <CheckListItem>
                                             Observe behavior, not returns
                                         </CheckListItem>
-                                        <CheckListItem variant="primary">
+                                        <CheckListItem>
                                             Watch inactivity periods
                                         </CheckListItem>
-                                        <CheckListItem variant="primary">
+                                        <CheckListItem>
                                             Look at drawdowns, not final equity
                                         </CheckListItem>
-                                        <CheckListItem variant="primary">
+                                        <CheckListItem>
                                             Change one parameter at a time
                                         </CheckListItem>
-                                        <CheckListItem variant="primary">
+                                        <CheckListItem>
                                             Run multiple backtests in parallel
                                             to compare different parameter sets
                                         </CheckListItem>

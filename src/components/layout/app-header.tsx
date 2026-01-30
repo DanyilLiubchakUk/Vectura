@@ -6,6 +6,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AnimationsToggle } from "@/components/animations-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
@@ -93,6 +94,7 @@ export function AppHeader({ title }: AppHeaderProps) {
                             {title}
                         </h2>
                     )}
+                    <AnimationsToggle />
                     <ThemeToggle />
                 </div>
             </div>
