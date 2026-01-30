@@ -114,7 +114,7 @@ export default function DevelopmentJourneyPage() {
                                 </p>
                             </div>
 
-                            <Card className="border-destructive/20 bg-destructive/10">
+                            <Card className="border-destructive/20 bg-destructive/10 dark:bg-destructive/10">
                                 <CardHeader>
                                     <div className="flex items-center gap-2">
                                         <AlertCircle className="h-5 w-5 text-destructive" />
@@ -153,10 +153,10 @@ export default function DevelopmentJourneyPage() {
                                 </div>
                             </div>
 
-                            <Card className="border-primary/20 bg-primary/10">
+                            <Card className="border-green-200 dark:border-green-900 bg-green-100/55 dark:bg-green-950/45">
                                 <CardHeader>
                                     <div className="flex items-center gap-2">
-                                        <CheckCircle2 className="h-5 w-5 text-primary" />
+                                        <CheckCircle2 className="h-5 w-5  text-green-600 dark:text-green-500" />
                                         <CardTitle>Result</CardTitle>
                                     </div>
                                 </CardHeader>

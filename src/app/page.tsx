@@ -40,7 +40,7 @@ export default function Page() {
                         <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center pt-1 md:pt-2">
                             <Link
                                 href="/backtest"
-                                className="[&:hover_button]:bg-muted-foreground [&:hover_button]:text-accent"
+                                className="[&:hover_button]:bg-primary/75 [&:hover_button]:text-primary-foreground/75"
                             >
                                 <Button size="lg" className="text-lg px-8">
                                     Start Backtesting
@@ -80,7 +80,7 @@ export default function Page() {
                                 </p>
                                 <Link
                                     href="/about"
-                                    className="[&:hover_button]:underline [&:hover_button]:bg-muted [&:hover_button]:text-accent-foreground"
+                                    className="[&:hover_button]:underline [&:hover_button]:bg-input/50 [&:hover_button]:text-accent-foreground"
                                 >
                                     <Button
                                         variant="outline"
@@ -119,13 +119,13 @@ export default function Page() {
                                 </CardHeader>
                                 <CardContent className="space-y-2 md:space-y-3">
                                     <ul className="space-y-1.5 md:space-y-2 text-xs md:text-sm text-muted-foreground">
-                                        <CheckListItem variant="success">
+                                        <CheckListItem>
                                             Data stays on your device
                                         </CheckListItem>
-                                        <CheckListItem variant="success">
+                                        <CheckListItem>
                                             Uses your computer's power
                                         </CheckListItem>
-                                        <CheckListItem variant="success">
+                                        <CheckListItem>
                                             Real-time progress updates
                                         </CheckListItem>
                                     </ul>
@@ -146,16 +146,16 @@ export default function Page() {
                                 </CardHeader>
                                 <CardContent className="space-y-2 md:space-y-3">
                                     <ul className="space-y-1.5 md:space-y-2 text-xs md:text-sm text-muted-foreground">
-                                        <CheckListItem variant="success">
+                                        <CheckListItem>
                                             Always fast, no matter your device
                                         </CheckListItem>
-                                        <CheckListItem variant="success">
+                                        <CheckListItem>
                                             Doesn't use your computer
                                         </CheckListItem>
-                                        <CheckListItem variant="success">
+                                        <CheckListItem>
                                             Real-time progress updates
                                         </CheckListItem>
-                                        <CheckListItem variant="success">
+                                        <CheckListItem>
                                             Better for slower devices
                                         </CheckListItem>
                                     </ul>
@@ -194,7 +194,7 @@ export default function Page() {
                                     </p>
                                     <Link
                                         href="/how-backtest-works"
-                                        className="[&:hover_button]:underline [&:hover_button]:bg-muted [&:hover_button]:text-accent-foreground"
+                                        className="[&:hover_button]:underline [&:hover_button]:bg-input/50 [&:hover_button]:text-accent-foreground"
                                     >
                                         <Button
                                             variant="outline"
@@ -222,7 +222,7 @@ export default function Page() {
                                     </p>
                                     <Link
                                         href="/development-journey"
-                                        className="[&:hover_button]:underline [&:hover_button]:bg-muted [&:hover_button]:text-accent-foreground"
+                                        className="[&:hover_button]:underline [&:hover_button]:bg-input/50 [&:hover_button]:text-accent-foreground"
                                     >
                                         <Button
                                             variant="outline"
@@ -250,7 +250,7 @@ export default function Page() {
                             </p>
                         </div>
                         <Card className="border-2">
-                            <CardContent className="pt-4 md:pt-6">
+                            <CardContent>
                                 <ol className="space-y-3 md:space-y-4 text-sm md:text-base text-muted-foreground">
                                     <li className="flex gap-3">
                                         <span className="font-semibold text-foreground min-w-[28px]">

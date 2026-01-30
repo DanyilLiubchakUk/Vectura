@@ -129,7 +129,7 @@ export function RangeCard({
                                 <Database className="h-4 w-4" />
                                 <div className="flex flex-col items-center">
                                     <span>{formatDate(range.have_from)}</span>
-                                    <span className="h-0.5 w-full bg-muted rounded" />
+                                    <span className="h-0.25 w-full bg-border rounded" />
                                     <span>{formatDate(range.have_to)}</span>
                                 </div>
                             </div>
@@ -200,7 +200,6 @@ export function RangeCard({
                                 )
                             }
                             disabled={range.isUpdating}
-                            className="h-8 text-xs"
                         />
                     </div>
                     <div className="space-y-1">
@@ -224,7 +223,6 @@ export function RangeCard({
                                 )
                             }
                             disabled={range.isUpdating}
-                            className="h-8 text-xs"
                         />
                     </div>
                 </div>

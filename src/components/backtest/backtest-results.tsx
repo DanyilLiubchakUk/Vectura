@@ -28,7 +28,7 @@ function formatCurrency(num: number | undefined | null) {
 
 function ChartLoader() {
     return (
-        <div className="absolute inset-0 flex items-center justify-center bg-card rounded-md border border-border">
+        <div className="absolute inset-0 flex items-center justify-center rounded-md border border-border">
             <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-sm font-medium text-foreground">Loading chart data...</p>
@@ -349,7 +349,7 @@ export function BacktestResults({ result, runId }: {
                 </CardContent>
             </Card>
             {result.chartData && (
-                <Card className="mt-4">
+                <Card className="mt-4 bg-card dark:bg-card">
                     <CardContent className="space-y-4">
                         <ChartControls
                             state={controlsState}

@@ -26,7 +26,7 @@ function AccordionItem({
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
-      className={cn("data-open:bg-muted/50 not-last:border-b", className)}
+      className={cn("bg-card/65 dark:bg-card/85 transition-colors not-last:border-b", className)}
       {...props}
     />
   )
