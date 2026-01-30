@@ -200,7 +200,6 @@ export function RangeCard({
                                 )
                             }
                             disabled={range.isUpdating}
-                            className="h-8 text-xs"
                         />
                     </div>
                     <div className="space-y-1">
@@ -224,7 +223,6 @@ export function RangeCard({
                                 )
                             }
                             disabled={range.isUpdating}
-                            className="h-8 text-xs"
                         />
                     </div>
                 </div>
