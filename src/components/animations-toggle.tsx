@@ -36,7 +36,7 @@ export function AnimationsToggle() {
           <span className="sr-only">Toggle Animations</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent className="w-max" align="end">
         <DropdownMenuItem onClick={() => setUserEnabled(true)} aria-label="Enable animations">
           Enable Animations
         </DropdownMenuItem>
