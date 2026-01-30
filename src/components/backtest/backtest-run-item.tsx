@@ -62,8 +62,8 @@ export function BacktestRunItem({
     return (
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
             <div ref={containerRef}>
-                <div className="flex items-center w-full p-4 border rounded-lg hover:bg-accent transition-colors">
-                    <CollapsibleTrigger className="flex items-center gap-3 relative w-0 flex-1 min-w-0">
+                <div className="flex items-center w-full border bg-card/60 hover:bg-accent/60 transition-all rounded-lg has-[button[data-state='open']]:rounded-b-none">
+                    <CollapsibleTrigger className="flex items-center gap-3 p-4 relative w-0 flex-1 min-w-0">
                         <ExecutionModeIcon
                             className={cn(
                                 "h-5 w-5 text-muted-foreground shrink-0",
@@ -71,13 +71,13 @@ export function BacktestRunItem({
                             )}
                         />
                         {isRunning && (
-                            <Loader2 className="h-5 w-5 scale-75 shrink-0 animate-spin text-muted-foreground absolute opacity-75 left-0" />
+                            <Loader2 className="h-5 w-5 scale-75 shrink-0 animate-spin text-muted-foreground absolute opacity-75 left-4" />
                         )}
                         <div className="font-medium truncate min-w-0 flex-1 text-start">
                             {run.name}
                         </div>
                     </CollapsibleTrigger>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mr-4">
                         <div
                             className="flex items-center gap-1"
                         >
@@ -125,14 +125,14 @@ export function BacktestRunItem({
                 </div>
             </div>
             <CollapsibleContent>
-                <div className="p-2 space-y-4 border-x border-b rounded-b-lg">
+                <div className="p-1 space-y-4 bg-card/60 border-x border-b rounded-b-lg">
                     {/* Configuration */}
                     <BacktestConfigDisplay config={run.config} />
 
                     {/* Error Display */}
                     {(isError || isCancelled) && run.error && (
-                        <div className="p-4 bg-destructive/10 border border-destructive rounded-md">
-                            <p className="text-destructive text-sm">
+                        <div className="mt-4 p-4 border border-destructive/20 bg-destructive/10 rounded-md">
+                            <p className="text-destructive/80 text-sm">
                                 {run.error}
                             </p>
                         </div>
