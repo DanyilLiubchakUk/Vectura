@@ -1,5 +1,6 @@
 "use client";
 
+import { useSparksStore } from "@/stores/animations-toggle";
 import { usePathname } from "next/navigation";
 import { useRef, useEffect } from "react";
 
@@ -79,17 +80,20 @@ function randomInt(min: number, max: number): number {
 
 export function SparksCanvas() {
   const pathname = usePathname();
+  const userEnabled = useSparksStore((s) => s.userEnabled);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<SparkParticle[]>([]);
   const spawnTimerRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
 
+  const sysReduced =
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const effectiveEnabled = userEnabled === null ? !sysReduced : userEnabled;
+
   useEffect(() => {
     if (shouldHideSparks(pathname)) return;
-    const prefersReducedMotion =
-      typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReducedMotion) return;
+    if (!effectiveEnabled) return;
 
     const canvasEl = canvasRef.current;
     if (!canvasEl) return;
@@ -229,7 +233,7 @@ export function SparksCanvas() {
         rafRef.current = null;
         if (spawnTimerRef.current != null) clearTimeout(spawnTimerRef.current);
         spawnTimerRef.current = null;
-      } else if (!prefersReducedMotion) {
+      } else if (effectiveEnabled) {
         lastTimeRef.current = performance.now();
         rafRef.current = requestAnimationFrame(tick);
         scheduleNextSpawn();
@@ -243,9 +247,9 @@ export function SparksCanvas() {
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       if (spawnTimerRef.current != null) clearTimeout(spawnTimerRef.current);
     };
-  }, [pathname]);
+  }, [pathname, userEnabled]);
 
-  if (shouldHideSparks(pathname)) return null;
+  if (shouldHideSparks(pathname) || !effectiveEnabled) return null;
 
   return (
     <canvas
