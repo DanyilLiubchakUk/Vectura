@@ -28,8 +28,7 @@ export function BacktestProgress({
                                 Connecting to execution server...
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">
-                                Starting the cloud backtest. This may take up to a
-                                minute—please wait.
+                                This may take up to a minute - please wait.
                             </p>
                         </div>
                     </div>
