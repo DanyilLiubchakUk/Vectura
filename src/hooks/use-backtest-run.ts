@@ -33,15 +33,18 @@ export function useBacktestRun(runId: string) {
                     : values.orderGapPct
             };
 
-            // Cancel existing run if it's running
-            if (run?.status === "running") {
+            // Cancel existing run if it's in progress (has ws or abort controller)
+            const isActive = run?.status === "running" || run?.status === "connecting";
+            const hasActiveExecution = !!(run?.wsRef || run?.abortController);
+            if (isActive && hasActiveExecution) {
                 store.cancelRun(runId);
             }
 
             // Update config and reset status
+            const initialStatus = values.executionMode === "cloud" ? "connecting" : "running";
             store.updateRun(runId, {
                 config,
-                status: "running",
+                status: initialStatus,
                 progress: null,
                 result: null,
                 error: null,
@@ -317,9 +320,15 @@ export function useBacktestRun(runId: string) {
                 try {
                     const data = JSON.parse(event.data);
                     const currentRun = store.getRun(runId);
-                    if (!currentRun || currentRun.status !== "running") {
+                    const isActive = currentRun?.status === "running" || currentRun?.status === "connecting";
+                    if (!currentRun || !isActive) {
                         ws.close();
                         return;
+                    }
+
+                    // On fFirst message received switch from "connecting" to "running"
+                    if (currentRun.status === "connecting") {
+                        store.updateRun(runId, { status: "running" });
                     }
 
                     if (data.type === "progress") {
@@ -516,16 +525,15 @@ export function useBacktestRun(runId: string) {
             ws.onclose = () => {
                 store.updateRun(runId, { wsRef: null });
 
-                // Check if the connection closed unexpectedly while backtest was running
+                // Check if the connection closed unexpectedly while backtest was running or connecting
                 const currentRun = store.getRun(runId);
-                if (currentRun?.status === "running") {
-                    if (!currentRun.result) {
-                        store.updateRun(runId, {
-                            status: "error",
-                            error: "WebSocket connection closed unexpectedly. The backtest may still be running on the server.",
-                        });
-                        reject(new Error("WebSocket connection closed unexpectedly"));
-                    }
+                const wasActive = currentRun?.status === "running" || currentRun?.status === "connecting";
+                if (wasActive && !currentRun?.result) {
+                    store.updateRun(runId, {
+                        status: "error",
+                        error: "WebSocket connection closed unexpectedly. The backtest may still be running on the server.",
+                    });
+                    reject(new Error("WebSocket connection closed unexpectedly"));
                 }
             };
         });

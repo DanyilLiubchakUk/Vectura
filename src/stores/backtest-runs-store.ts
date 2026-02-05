@@ -5,7 +5,7 @@ import type {
     BacktestResult,
 } from "@/backtest/types";
 
-export type BacktestRunStatus = "running" | "completed" | "error" | "cancelled";
+export type BacktestRunStatus = "connecting" | "running" | "completed" | "error" | "cancelled";
 
 export interface BacktestRun {
     id: string;
@@ -40,10 +40,11 @@ export const useBacktestRunsStore = create<BacktestRunsStore>((set, get) => ({
         const id = `backtest-${Date.now()}-${Math.random()
             .toString(36)
             .substr(2, 9)}`;
+        const initialStatus = config.executionMode === "cloud" ? "connecting" : "running";
         const newRun: BacktestRun = {
             id,
             name,
-            status: "running",
+            status: initialStatus,
             config,
             progress: null,
             result: null,
@@ -105,7 +106,7 @@ export const useBacktestRunsStore = create<BacktestRunsStore>((set, get) => ({
     removeRun: (id) => {
         // Cancel the run first if it's running
         const run = get().runs.find((r) => r.id === id);
-        if (run && run.status === "running") {
+        if (run && (run.status === "running" || run.status === "connecting")) {
             get().cancelRun(id);
         }
         // Then remove it from the list
