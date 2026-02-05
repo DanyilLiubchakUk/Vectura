@@ -141,13 +141,59 @@ export function useBacktestRun(runId: string) {
         }
     };
 
-    const runCloudBacktest = (
+    const runCloudBacktest = async (
         runId: string,
         config: BacktestConfig
     ): Promise<void> => {
+        let backtestId: string;
+
+        try {
+            const workerBase = process.env.NEXT_PUBLIC_WS_URL?.replace(/^wss:/, "https:").replace(/^ws:/, "http:") || "";
+            const startUrl = workerBase ? `${workerBase.replace(/\/$/, "")}/start-backtest` : "";
+            if (!startUrl) {
+                store.updateRun(runId, {
+                    status: "error",
+                    error: "NEXT_PUBLIC_WS_URL not configured",
+                });
+                throw new Error("NEXT_PUBLIC_WS_URL not configured");
+            }
+            const startRes = await fetch(startUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ config: { ...config, executionMode: "cloud" } }),
+            });
+
+            if (!startRes.ok) {
+                const err = (await startRes.json().catch(() => ({}))) as {
+                    message?: string;
+                    error?: string;
+                };
+                const message =
+                    err.message || err.error || "Failed to start backtest";
+                store.updateRun(runId, { status: "error", error: message });
+                throw new Error(message);
+            }
+
+            const json = (await startRes.json()) as { backtestId?: string; jobId?: string };
+            backtestId = json.jobId ?? json.backtestId ?? "";
+            if (!backtestId) {
+                store.updateRun(runId, {
+                    status: "error",
+                    error: "Invalid response from server",
+                });
+                throw new Error("Invalid response from server");
+            }
+
+            store.updateRun(runId, { cloudBacktestId: backtestId });
+
+        } catch (err) {
+            if (err instanceof Error) throw err;
+            throw new Error("Failed to start backtest");
+        }
+
         return new Promise((resolve, reject) => {
-            const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
-            if (!wsUrl) {
+            const wsBase = process.env.NEXT_PUBLIC_WS_URL;
+            if (!wsBase) {
                 store.updateRun(runId, {
                     status: "error",
                     error: "NEXT_PUBLIC_WS_URL not configured",
@@ -156,17 +202,12 @@ export function useBacktestRun(runId: string) {
                 return;
             }
 
+            const wsUrl = wsBase.includes("?") ? `${wsBase}&jobId=${backtestId}` : `${wsBase}?jobId=${backtestId}`;
             const ws = new WebSocket(wsUrl);
             store.updateRun(runId, { wsRef: ws });
 
             ws.onopen = () => {
-                ws.send(
-                    JSON.stringify({
-                        type: "start_backtest",
-                        mode: "cloud",
-                        config,
-                    })
-                );
+                ws.send(JSON.stringify({ backtestId }));
             };
 
             // Track chunked result assembly

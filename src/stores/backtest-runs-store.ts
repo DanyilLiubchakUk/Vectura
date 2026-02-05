@@ -18,6 +18,7 @@ export interface BacktestRun {
     createdAt: string;
     abortController?: AbortController;
     wsRef?: WebSocket | null;
+    cloudBacktestId?: string | null;
     readerRef?: ReadableStreamDefaultReader<Uint8Array> | null;
 }
 
@@ -65,9 +66,22 @@ export const useBacktestRunsStore = create<BacktestRunsStore>((set, get) => ({
         const run = get().runs.find((r) => r.id === id);
         if (run) {
             // Cancel WebSocket if exists
-            if (run.wsRef) {
+            if (run.wsRef && run.cloudBacktestId) {
+                const workerBase = typeof process !== "undefined" && process.env?.NEXT_PUBLIC_WS_URL
+                    ? process.env.NEXT_PUBLIC_WS_URL.replace(/^wss:/, "https:").replace(/^ws:/, "http:")
+                    : "";
+                if (workerBase) {
+                    fetch(`${workerBase.replace(/\/$/, "")}/cancel?jobId=${run.cloudBacktestId}`, {
+                        method: "POST",
+                    }).catch(() => {});
+                }
                 try {
-                    run.wsRef.send(JSON.stringify({ type: "cancel_backtest" }));
+                    run.wsRef.send(
+                        JSON.stringify({
+                            type: "cancel_backtest",
+                            backtestId: run.cloudBacktestId,
+                        })
+                    );
                 } catch {
                     // Ignore errors
                 }
@@ -84,6 +98,7 @@ export const useBacktestRunsStore = create<BacktestRunsStore>((set, get) => ({
             get().updateRun(id, {
                 status: "cancelled",
                 error: "Backtest cancelled",
+                cloudBacktestId: null,
             });
         }
     },
