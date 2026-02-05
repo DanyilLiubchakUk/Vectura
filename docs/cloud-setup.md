@@ -1,4 +1,4 @@
-# Complete Setup Guide — From Scratch
+# Complete Setup Guide - From Scratch
 
 This guide walks you through setting up the cloud backtest system.
 
@@ -12,16 +12,16 @@ This guide walks you through setting up the cloud backtest system.
 6. [Part 4: IAM User for Worker](#part-4-iam-user-for-worker)
 7. [Part 5: Cloudflare Worker](#part-5-cloudflare-worker)
 8. [Part 6: Next.js Frontend](#part-6-nextjs-frontend)
-11. [Values Reference](#values-reference)
-12. [Troubleshooting](#troubleshooting)
+9. [Values Reference](#values-reference)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Overview
 
-- **Cloudflare Worker** — Coordinator: POST /start-backtest, POST /callback, GET /cancel-check, POST /cancel, WebSocket. Uses Durable Objects.
-- **AWS Lambda** — Runs backtest, POSTs progress/result to Worker callback. Checks Worker for cancel.
-- **Next.js** — UI only. Client POSTs to Worker, connects WebSocket to Worker.
+-   **Cloudflare Worker** - Coordinator: POST /start-backtest, POST /callback, GET /cancel-check, POST /cancel, WebSocket. Uses Durable Objects.
+-   **AWS Lambda** - Runs backtest, POSTs progress/result to Worker callback. Checks Worker for cancel.
+-   **Next.js** - UI only. Client POSTs to Worker, connects WebSocket to Worker.
 
 ---
 
@@ -69,21 +69,21 @@ This guide walks you through setting up the cloud backtest system.
 
 ### 3.3 Configure
 
-- Timeout: 15 min
-- Memory: 1024 MB
-- **Handler: `backtest-handler.handler`**
+-   Timeout: 15 min
+-   Memory: 1024 MB
+-   **Handler: `backtest-handler.handler`**
 
 ### 3.4 Environment Variables
 
-| Key | Value |
-|-----|-------|
-| `ALPHA_VANTAGE_API_KEY` | (Alpha Vantage) |
-| `APCA_API_BASE_URL` | `https://paper-api.alpaca.markets` |
-| `APCA_API_KEY_ID` | (Alpaca) |
-| `APCA_API_SECRET_KEY` | (Alpaca) |
-| `CALLBACK_SECRET` | Same value as Worker `CALLBACK_SECRET` (see Part 5.2) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | (your Supabase) |
-| `NEXT_PUBLIC_SUPABASE_URL` | (your Supabase) |
+| Key                             | Value                                                 |
+| ------------------------------- | ----------------------------------------------------- |
+| `ALPHA_VANTAGE_API_KEY`         | (Alpha Vantage)                                       |
+| `APCA_API_BASE_URL`             | `https://paper-api.alpaca.markets`                    |
+| `APCA_API_KEY_ID`               | (Alpaca)                                              |
+| `APCA_API_SECRET_KEY`           | (Alpaca)                                              |
+| `CALLBACK_SECRET`               | Same value as Worker `CALLBACK_SECRET` (see Part 5.2) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | (your Supabase)                                       |
+| `NEXT_PUBLIC_SUPABASE_URL`      | (your Supabase)                                       |
 
 ### 3.5 Deploy Code
 
@@ -108,14 +108,14 @@ The Worker needs Lambda invoke only.
 
 ```json
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": "lambda:InvokeFunction",
-      "Resource": "arn:aws:lambda:REGION:ACCOUNT_ID:function:backtest-handler"
-    }
-  ]
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "lambda:InvokeFunction",
+            "Resource": "arn:aws:lambda:REGION:ACCOUNT_ID:function:backtest-handler"
+        }
+    ]
 }
 ```
 
@@ -125,7 +125,7 @@ Replace REGION and ACCOUNT_ID. Name: `VecturaWorkerPolicy`
 
 1. Attach `VecturaWorkerPolicy` to `vectura-worker`
 2. Security credentials → Create access key → Application running outside AWS
-3. Save **Access key ID** and **Secret access key** — add as Worker secrets
+3. Save **Access key ID** and **Secret access key** - add as Worker secrets
 
 ---
 
@@ -148,8 +148,8 @@ npm run put-secret AWS_SECRET_ACCESS_KEY
 npm run put-secret CALLBACK_SECRET
 ```
 
-- Use access key/secret from Part 4.3
-- `CALLBACK_SECRET`: random string (e.g. `openssl rand -hex 32`). Use the **same value** in Lambda env.
+-   Use access key/secret from Part 4.3
+-   `CALLBACK_SECRET`: random string (e.g. `openssl rand -hex 32`). Use the **same value** in Lambda env.
 
 ### 5.3 Deploy
 
@@ -167,36 +167,48 @@ Note the URL: `https://vectura-progress-worker.YOUR_SUBDOMAIN.workers.dev`. WebS
 
 Add to Vercel or `.env.local`:
 
-| Key | Value |
-|-----|-------|
+| Key                  | Value                                                      |
+| -------------------- | ---------------------------------------------------------- |
 | `NEXT_PUBLIC_WS_URL` | `wss://vectura-progress-worker.YOUR_SUBDOMAIN.workers.dev` |
 
 ---
 
 ## Values Reference
 
-| Item | Example |
-|------|---------|
-| Lambda | `backtest-handler` |
-| Worker URL | `https://vectura-progress-worker.xxx.workers.dev` |
-| Worker WebSocket | `wss://vectura-progress-worker.xxx.workers.dev` |
+| Item             | Example                                           |
+| ---------------- | ------------------------------------------------- |
+| Lambda           | `backtest-handler`                                |
+| Worker URL       | `https://vectura-progress-worker.xxx.workers.dev` |
+| Worker WebSocket | `wss://vectura-progress-worker.xxx.workers.dev`   |
 
 ---
 
 ## Limits
 
-- **15 minute maximum** — Lambda enforces a 15 min limit per backtest. If exceeded, the user sees: "Backtest exceeded 15 minute limit. Please use a shorter date range."
+-   **15 minute maximum** - Lambda enforces a 15 min limit per backtest. If exceeded, the user sees: "Backtest exceeded 15 minute limit. Please use a shorter date range."
 
 ---
 
 ## Debugging
 
-- **Wrangler tail** — `cd worker && npm run log`
+-   **Wrangler tail** - `cd worker && npm run log`
 
 ---
 
 ## Troubleshooting
 
-- **"Cannot find module 'index'"** — Lambda Handler is wrong. Go to Lambda console → Code → Runtime settings → Edit → set Handler to `backtest-handler.handler` (not `index.handler`) → Save.
-- **Result not received** — Ensure Lambda `CALLBACK_SECRET` matches Worker.
-- **"Backtest exceeded 15 minute limit"** — Use a shorter date range. Lambda max runtime is 15 min.
+-   **"Cannot find module 'index'"** - Lambda Handler is wrong. Go to Lambda console → Code → Runtime settings → Edit → set Handler to `backtest-handler.handler` (not `index.handler`) → Save.
+-   **Result not received** - Ensure Lambda `CALLBACK_SECRET` matches Worker.
+-   **"Backtest exceeded 15 minute limit"** - Use a shorter date range. Lambda max runtime is 15 min.
+
+---
+
+## Migration from AWS API Gateway
+
+Previously, Cloud Mode used **AWS API Gateway WebSocket** to connect the client directly to Lambda. The client would connect to a WebSocket API, Lambda would handle the connection, and progress was streamed over that connection.
+
+API Gateway is only free for the first 12 months of AWS account creation. After that, costs accumulate. The migration to Cloudflare Workers + Durable Objects provides:
+
+-   **Fully free tier** - Cloudflare Workers and Durable Objects have generous free limits with no time limit
+-   **Same client experience** - The client still uses a single WebSocket connection; the Worker acts as a proxy
+-   **Job-based routing** - Durable Objects keyed by job ID handle stateful memory per backtest session, so Lambda and client stay in sync via the shared job ID
