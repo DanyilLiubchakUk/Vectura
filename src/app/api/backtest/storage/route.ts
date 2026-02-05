@@ -15,13 +15,13 @@ export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
+        const body = (await request.json()) as { operation?: string;[key: string]: unknown };
         const { operation, ...params } = body;
 
         switch (operation) {
             case "readSymbolRange": {
-                const { symbol } = params;
-                if (!symbol) {
+                const symbol = params.symbol;
+                if (!symbol || typeof symbol !== "string") {
                     return new Response(
                         JSON.stringify({ error: "Missing symbol" }),
                         { status: 400 }
@@ -35,14 +35,12 @@ export async function POST(request: NextRequest) {
             }
 
             case "upsertSymbolRange": {
-                const {
-                    symbol,
-                    haveFrom,
-                    haveTo,
-                    existingRange,
-                    firstAvailableDay,
-                } = params;
-                if (!symbol) {
+                const symbol = params.symbol;
+                const haveFrom = params.haveFrom;
+                const haveTo = params.haveTo;
+                const existingRange = params.existingRange;
+                const firstAvailableDay = params.firstAvailableDay;
+                if (!symbol || typeof symbol !== "string") {
                     return new Response(
                         JSON.stringify({ error: "Missing symbol" }),
                         { status: 400 }
@@ -50,10 +48,10 @@ export async function POST(request: NextRequest) {
                 }
                 const result = await upsertSymbolRange(
                     symbol,
-                    haveFrom,
-                    haveTo,
-                    existingRange,
-                    firstAvailableDay
+                    (haveFrom ?? null) as string | null,
+                    (haveTo ?? null) as string | null,
+                    (existingRange ?? null) as SymbolRange | null,
+                    (firstAvailableDay ?? null) as string | null
                 );
                 return new Response(JSON.stringify({ data: result }), {
                     status: 200,
@@ -62,8 +60,10 @@ export async function POST(request: NextRequest) {
             }
 
             case "loadPersistedDays": {
-                const { symbol, reqFrom, reqTo } = params;
-                if (!symbol || !reqFrom || !reqTo) {
+                const symbol = params.symbol;
+                const reqFrom = params.reqFrom;
+                const reqTo = params.reqTo;
+                if (!symbol || !reqFrom || !reqTo || typeof symbol !== "string" || typeof reqFrom !== "string" || typeof reqTo !== "string") {
                     return new Response(
                         JSON.stringify({
                             error: "Missing symbol, reqFrom, or reqTo",
@@ -79,8 +79,10 @@ export async function POST(request: NextRequest) {
             }
 
             case "flushBucketToSupabase": {
-                const { symbol, bucket, currentRange } = params;
-                if (!symbol || !bucket) {
+                const symbol = params.symbol;
+                const bucket = params.bucket;
+                const currentRange = params.currentRange;
+                if (!symbol || !bucket || typeof symbol !== "string") {
                     return new Response(
                         JSON.stringify({
                             error: "Missing symbol or bucket",
@@ -100,8 +102,8 @@ export async function POST(request: NextRequest) {
             }
 
             case "deleteCachedBarsForSymbol": {
-                const { symbol } = params;
-                if (!symbol) {
+                const symbol = params.symbol;
+                if (!symbol || typeof symbol !== "string") {
                     return new Response(
                         JSON.stringify({ error: "Missing symbol" }),
                         { status: 400 }
@@ -115,8 +117,10 @@ export async function POST(request: NextRequest) {
             }
 
             case "updateSplitsInDatabase": {
-                const { symbol, splits, lastSplitCheck } = params;
-                if (!symbol || !splits || !lastSplitCheck) {
+                const symbol = params.symbol;
+                const splits = params.splits;
+                const lastSplitCheck = params.lastSplitCheck;
+                if (!symbol || !splits || !lastSplitCheck || typeof symbol !== "string" || typeof lastSplitCheck !== "string") {
                     return new Response(
                         JSON.stringify({
                             error: "Missing symbol, splits, or lastSplitCheck",
@@ -136,9 +140,11 @@ export async function POST(request: NextRequest) {
             }
 
             case "resetSymbolRangeAfterSplitChange": {
-                const { symbol, splits, lastSplitCheck, firstAvailableDay } =
-                    params;
-                if (!symbol || !splits || !lastSplitCheck) {
+                const symbol = params.symbol;
+                const splits = params.splits;
+                const lastSplitCheck = params.lastSplitCheck;
+                const firstAvailableDay = params.firstAvailableDay;
+                if (!symbol || !splits || !lastSplitCheck || typeof symbol !== "string" || typeof lastSplitCheck !== "string") {
                     return new Response(
                         JSON.stringify({
                             error: "Missing required parameters",
@@ -150,7 +156,7 @@ export async function POST(request: NextRequest) {
                     symbol,
                     splits as SplitInfo[],
                     lastSplitCheck,
-                    firstAvailableDay
+                    firstAvailableDay as string | null | undefined
                 );
                 return new Response(JSON.stringify({ success: true }), {
                     status: 200,
@@ -159,8 +165,9 @@ export async function POST(request: NextRequest) {
             }
 
             case "updateFirstAvailableDay": {
-                const { symbol, firstAvailableDay } = params;
-                if (!symbol || !firstAvailableDay) {
+                const symbol = params.symbol;
+                const firstAvailableDay = params.firstAvailableDay;
+                if (!symbol || !firstAvailableDay || typeof symbol !== "string" || typeof firstAvailableDay !== "string") {
                     return new Response(
                         JSON.stringify({
                             error: "Missing symbol or firstAvailableDay",

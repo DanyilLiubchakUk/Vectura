@@ -8,7 +8,6 @@ export default defineConfig({
     minify: true,
     // External: AWS SDK (available in Lambda runtime), React, "@trigger.dev/sdk" (not needed)
     external: [
-        "@aws-sdk/client-apigatewaymanagementapi",
         "@aws-sdk/client-lambda",
         "@types/aws-lambda",
         "react",

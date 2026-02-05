@@ -23,12 +23,11 @@ function BacktestRunExecutorItem({ runId }: { runId: string }) {
     const hasStartedRef = useRef(false);
 
     useEffect(() => {
-        if (
-            !run ||
-            run.status !== "running" ||
+        const needsToStart = run?.status === "running" || run?.status === "connecting";
+        if (!run ||
+            !needsToStart ||
             run.progress !== null ||
-            hasStartedRef.current
-        ) {
+            hasStartedRef.current) {
             return;
         }
 
@@ -63,7 +62,7 @@ function BacktestRunExecutorItem({ runId }: { runId: string }) {
     }, [run, runId, runBacktest, updateRun]);
 
     useEffect(() => {
-        if (run?.status !== "running") {
+        if (run?.status !== "running" && run?.status !== "connecting") {
             hasStartedRef.current = false;
         }
     }, [run?.status]);

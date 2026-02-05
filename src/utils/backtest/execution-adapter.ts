@@ -16,7 +16,7 @@ function shouldUseClient(): boolean {
     return isBrowser && currentExecutionMode === "local";
 }
 
-async function getServerAdapter() {
+async function getServerAdapter(): Promise<typeof serverAdapter> {
     if (isBrowser) {
         throw new Error("Server adapter should not be used in browser");
     }
@@ -64,13 +64,13 @@ export const backtestStorageAdapter = {
         firstAvailableDay?: string | null
     ): Promise<SymbolRange | null> {
         if (shouldUseClient()) {
-            return backtestStorageClient.upsertSymbolRange(
+            return (await backtestStorageClient.upsertSymbolRange(
                 symbol,
                 haveFrom,
                 haveTo,
                 existingRange,
                 firstAvailableDay
-            );
+            )) as SymbolRange | null;
         }
         const adapter = await getServerAdapter();
         return adapter.storage.upsertSymbolRange(
@@ -120,7 +120,8 @@ export const backtestStorageAdapter = {
 
     async deleteCachedBarsForSymbol(symbol: string): Promise<void> {
         if (shouldUseClient()) {
-            return backtestStorageClient.deleteCachedBarsForSymbol(symbol);
+            await backtestStorageClient.deleteCachedBarsForSymbol(symbol);
+            return;
         }
         const adapter = await getServerAdapter();
         return adapter.storage.deleteCachedBarsForSymbol(symbol);

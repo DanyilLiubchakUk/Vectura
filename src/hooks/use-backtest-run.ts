@@ -33,15 +33,18 @@ export function useBacktestRun(runId: string) {
                     : values.orderGapPct
             };
 
-            // Cancel existing run if it's running
-            if (run?.status === "running") {
+            // Cancel existing run if it's in progress (has ws or abort controller)
+            const isActive = run?.status === "running" || run?.status === "connecting";
+            const hasActiveExecution = !!(run?.wsRef || run?.abortController);
+            if (isActive && hasActiveExecution) {
                 store.cancelRun(runId);
             }
 
             // Update config and reset status
+            const initialStatus = values.executionMode === "cloud" ? "connecting" : "running";
             store.updateRun(runId, {
                 config,
-                status: "running",
+                status: initialStatus,
                 progress: null,
                 result: null,
                 error: null,
@@ -141,13 +144,59 @@ export function useBacktestRun(runId: string) {
         }
     };
 
-    const runCloudBacktest = (
+    const runCloudBacktest = async (
         runId: string,
         config: BacktestConfig
     ): Promise<void> => {
+        let backtestId: string;
+
+        try {
+            const workerBase = process.env.NEXT_PUBLIC_WS_URL?.replace(/^wss:/, "https:").replace(/^ws:/, "http:") || "";
+            const startUrl = workerBase ? `${workerBase.replace(/\/$/, "")}/start-backtest` : "";
+            if (!startUrl) {
+                store.updateRun(runId, {
+                    status: "error",
+                    error: "NEXT_PUBLIC_WS_URL not configured",
+                });
+                throw new Error("NEXT_PUBLIC_WS_URL not configured");
+            }
+            const startRes = await fetch(startUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ config: { ...config, executionMode: "cloud" } }),
+            });
+
+            if (!startRes.ok) {
+                const err = (await startRes.json().catch(() => ({}))) as {
+                    message?: string;
+                    error?: string;
+                };
+                const message =
+                    err.message || err.error || "Failed to start backtest";
+                store.updateRun(runId, { status: "error", error: message });
+                throw new Error(message);
+            }
+
+            const json = (await startRes.json()) as { backtestId?: string; jobId?: string };
+            backtestId = json.jobId ?? json.backtestId ?? "";
+            if (!backtestId) {
+                store.updateRun(runId, {
+                    status: "error",
+                    error: "Invalid response from server",
+                });
+                throw new Error("Invalid response from server");
+            }
+
+            store.updateRun(runId, { cloudBacktestId: backtestId });
+
+        } catch (err) {
+            if (err instanceof Error) throw err;
+            throw new Error("Failed to start backtest");
+        }
+
         return new Promise((resolve, reject) => {
-            const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
-            if (!wsUrl) {
+            const wsBase = process.env.NEXT_PUBLIC_WS_URL;
+            if (!wsBase) {
                 store.updateRun(runId, {
                     status: "error",
                     error: "NEXT_PUBLIC_WS_URL not configured",
@@ -156,17 +205,12 @@ export function useBacktestRun(runId: string) {
                 return;
             }
 
+            const wsUrl = wsBase.includes("?") ? `${wsBase}&jobId=${backtestId}` : `${wsBase}?jobId=${backtestId}`;
             const ws = new WebSocket(wsUrl);
             store.updateRun(runId, { wsRef: ws });
 
             ws.onopen = () => {
-                ws.send(
-                    JSON.stringify({
-                        type: "start_backtest",
-                        mode: "cloud",
-                        config,
-                    })
-                );
+                ws.send(JSON.stringify({ backtestId }));
             };
 
             // Track chunked result assembly
@@ -276,9 +320,15 @@ export function useBacktestRun(runId: string) {
                 try {
                     const data = JSON.parse(event.data);
                     const currentRun = store.getRun(runId);
-                    if (!currentRun || currentRun.status !== "running") {
+                    const isActive = currentRun?.status === "running" || currentRun?.status === "connecting";
+                    if (!currentRun || !isActive) {
                         ws.close();
                         return;
+                    }
+
+                    // On fFirst message received switch from "connecting" to "running"
+                    if (currentRun.status === "connecting") {
+                        store.updateRun(runId, { status: "running" });
                     }
 
                     if (data.type === "progress") {
@@ -475,16 +525,15 @@ export function useBacktestRun(runId: string) {
             ws.onclose = () => {
                 store.updateRun(runId, { wsRef: null });
 
-                // Check if the connection closed unexpectedly while backtest was running
+                // Check if the connection closed unexpectedly while backtest was running or connecting
                 const currentRun = store.getRun(runId);
-                if (currentRun?.status === "running") {
-                    if (!currentRun.result) {
-                        store.updateRun(runId, {
-                            status: "error",
-                            error: "WebSocket connection closed unexpectedly. The backtest may still be running on the server.",
-                        });
-                        reject(new Error("WebSocket connection closed unexpectedly"));
-                    }
+                const wasActive = currentRun?.status === "running" || currentRun?.status === "connecting";
+                if (wasActive && !currentRun?.result) {
+                    store.updateRun(runId, {
+                        status: "error",
+                        error: "WebSocket connection closed unexpectedly. The backtest may still be running on the server.",
+                    });
+                    reject(new Error("WebSocket connection closed unexpectedly"));
                 }
             };
         });

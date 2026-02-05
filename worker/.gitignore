@@ -1,0 +1,7 @@
+# dependencies
+/node_modules
+/.wrangler
+
+# env files
+.env*
+!.env.example

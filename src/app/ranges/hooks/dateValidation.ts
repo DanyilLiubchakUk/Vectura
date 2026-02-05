@@ -88,7 +88,7 @@ export function useDateValidation() {
                                 if (!res.ok) {
                                     return { day, isOpen: undefined, error: true };
                                 }
-                                const result = await res.json();
+                                const result = (await res.json()) as { error?: unknown; data?: boolean };
 
                                 if (result.error) {
                                     return { day, isOpen: undefined, error: true };
@@ -183,11 +183,14 @@ export function useDateValidation() {
                                     if (!res.ok) {
                                         return { day, nearest: null, error: true };
                                     }
-                                    const json = await res.json();
+                                    const json = (await res.json()) as {
+                                        error?: unknown;
+                                        data?: { previous: string | null; next: string | null };
+                                    };
                                     if (json.error) {
                                         return { day, nearest: null, error: true };
                                     }
-                                    return { day, nearest: json.data, error: false };
+                                    return { day, nearest: json.data ?? null, error: false };
                                 })
                                 .catch(() => {
                                     return { day, nearest: null, error: true };
@@ -261,11 +264,10 @@ export function useDateValidation() {
                             const hasValidStartSuggestions =
                                 filteredStartSuggestions.previous ||
                                 filteredStartSuggestions.next;
-                            errorMessage = `Start date ${start} is not a market trading day.${
-                                hasValidStartSuggestions
+                            errorMessage = `Start date ${start} is not a market trading day.${hasValidStartSuggestions
                                     ? " Choose one of the suggested dates."
                                     : ""
-                            }`;
+                                }`;
                         }
                     }
                     if (isEndOpen === false) {
@@ -287,11 +289,10 @@ export function useDateValidation() {
                             const hasValidEndSuggestions =
                                 filteredEndSuggestions.previous ||
                                 filteredEndSuggestions.next;
-                            const endMsg = `End date ${end} is not a market trading day.${
-                                hasValidEndSuggestions
+                            const endMsg = `End date ${end} is not a market trading day.${hasValidEndSuggestions
                                     ? " Choose one of the suggested dates."
                                     : ""
-                            }`;
+                                }`;
                             errorMessage = errorMessage
                                 ? `${errorMessage} ${endMsg}`
                                 : endMsg;

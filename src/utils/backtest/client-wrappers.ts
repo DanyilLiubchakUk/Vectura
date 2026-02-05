@@ -6,7 +6,10 @@ import {
 import type { DayBlob, SymbolRange, SplitInfo } from "@/backtest/types";
 import type { Tbar } from "@/utils/alpaca/getTradingData";
 
-async function apiCall(endpoint: string, body: any) {
+async function apiCall(
+    endpoint: string,
+    body: Record<string, unknown>
+): Promise<unknown> {
     const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -14,7 +17,7 @@ async function apiCall(endpoint: string, body: any) {
     });
 
     if (!response.ok) {
-        const error = await response.json();
+        const error = (await response.json()) as { error?: string };
         throw new Error(error.error || "API request failed");
     }
 
@@ -53,21 +56,26 @@ export async function fetchDayBarsFromAlpacaClient(
 export async function fetchSplitsFromAlphaVantageClient(
     symbol: string
 ): Promise<Array<{ effective_date: string; split_factor: number }> | null> {
-    const { data } = await apiCall("/api/backtest/fetch-splits", { symbol });
-    return data;
+    const result = (await apiCall("/api/backtest/fetch-splits", { symbol })) as {
+        data?: Array<{ effective_date: string; split_factor: number }> | null;
+    };
+    return result.data ?? null;
 }
 
-async function storageApi(operation: string, params: any) {
-    const { data, success } = await apiCall("/api/backtest/storage", {
+async function storageApi<T>(
+    operation: string,
+    params: Record<string, unknown>
+): Promise<T> {
+    const result = (await apiCall("/api/backtest/storage", {
         operation,
         ...params,
-    });
-    return data !== undefined ? data : success;
+    })) as { data?: T; success?: boolean };
+    return (result.data !== undefined ? result.data : result.success) as T;
 }
 
 export const backtestStorageClient = {
     readSymbolRange: (symbol: string) =>
-        storageApi("readSymbolRange", { symbol }),
+        storageApi<SymbolRange | null>("readSymbolRange", { symbol }),
     upsertSymbolRange: (
         symbol: string,
         haveFrom: string | null,
@@ -83,12 +91,17 @@ export const backtestStorageClient = {
             firstAvailableDay,
         }),
     loadPersistedDays: (symbol: string, reqFrom: string, reqTo: string) =>
-        storageApi("loadPersistedDays", { symbol, reqFrom, reqTo }),
+        storageApi<DayBlob[]>("loadPersistedDays", { symbol, reqFrom, reqTo }),
     flushBucketToSupabase: (
         symbol: string,
         bucket: DayBlob[],
         currentRange: SymbolRange | null
-    ) => storageApi("flushBucketToSupabase", { symbol, bucket, currentRange }),
+    ) =>
+        storageApi<SymbolRange | null>("flushBucketToSupabase", {
+            symbol,
+            bucket,
+            currentRange,
+        }),
     deleteCachedBarsForSymbol: (symbol: string) =>
         storageApi("deleteCachedBarsForSymbol", { symbol }),
     updateSplitsInDatabase: (
@@ -96,7 +109,7 @@ export const backtestStorageClient = {
         splits: SplitInfo[],
         lastSplitCheck: string
     ) =>
-        storageApi("updateSplitsInDatabase", {
+        storageApi<void>("updateSplitsInDatabase", {
             symbol,
             splits,
             lastSplitCheck,
@@ -107,12 +120,15 @@ export const backtestStorageClient = {
         lastSplitCheck: string,
         firstAvailableDay?: string | null
     ) =>
-        storageApi("resetSymbolRangeAfterSplitChange", {
+        storageApi<void>("resetSymbolRangeAfterSplitChange", {
             symbol,
             splits,
             lastSplitCheck,
             firstAvailableDay,
         }),
     updateFirstAvailableDay: (symbol: string, firstAvailableDay: string) =>
-        storageApi("updateFirstAvailableDay", { symbol, firstAvailableDay }),
+        storageApi<void>("updateFirstAvailableDay", {
+            symbol,
+            firstAvailableDay,
+        }),
 };

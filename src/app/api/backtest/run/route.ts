@@ -7,7 +7,7 @@ export const maxDuration = 300; // 5 minutes (maximum for Vercel hobby plan)
 
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
+        const body = (await request.json()) as { config?: BacktestConfig };
         const { config } = body;
 
         if (!config) {

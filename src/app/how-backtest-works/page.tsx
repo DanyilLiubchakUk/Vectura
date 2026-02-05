@@ -37,7 +37,7 @@ const faqSchema = [
         "name": "What is the difference between Local and Cloud Mode?",
         "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Local Mode runs the backtest on your machine and is recommended for most users. If your local computer is too slow or cannot complete the test, you can use Cloud Mode (runs on AWS Lambda) instead."
+            "text": "Local Mode runs the backtest on your machine and is recommended for most users. If your local computer is too slow or cannot complete the test, you can use Cloud Mode instead. Cloud Mode connects to a Cloudflare Worker via WebSocket; the Worker invokes AWS Lambda and uses Durable Objects to stream progress back to your browser."
         }
     },
     {
@@ -101,7 +101,7 @@ const howToSchema = {
         {
             "@type": "HowToStep",
             "name": "Choose Execution Mode",
-            "text": "Local Mode runs the backtest on your machine and is recommended for most users. If your local computer is too slow or cannot complete the test, you can use Cloud Mode (runs on AWS Lambda) instead."
+            "text": "Local Mode runs the backtest on your machine and is recommended for most users. If your local computer is too slow or cannot complete the test, you can use Cloud Mode instead. Cloud Mode uses a Cloudflare Worker and AWS Lambda; the client connects via WebSocket to the Worker, which invokes Lambda and routes progress back through Durable Objects."
         },
         {
             "@type": "HowToStep",
@@ -264,26 +264,27 @@ export default function HowBacktestWorksPage() {
                                             <div className="flex items-center gap-2 mb-2">
                                                 <Cloud className="h-4 w-4 text-primary" />
                                                 <h3 className="font-semibold">
-                                                    Cloud Mode (AWS Lambda)
+                                                    Cloud Mode (Cloudflare Worker + Lambda)
                                                 </h3>
                                             </div>
                                             <p className="text-sm text-muted-foreground mb-2">
-                                                Runs on AWS Lambda. Best when
-                                                you don't want to use local
-                                                resources or need longer
-                                                execution times.
+                                                Connects to a Cloudflare Worker via WebSocket. The Worker invokes
+                                                AWS Lambda and uses Durable Objects to route progress back to your
+                                                browser. Best when you don't want to use local resources or need
+                                                longer execution times.
                                             </p>
                                             <ul className="text-sm text-muted-foreground space-y-1">
                                                 <li>
-                                                    • Handles long-running
-                                                    backtests (up to 15 minutes)
+                                                    • Handles long-running backtests (up to 15 minutes)
                                                 </li>
                                                 <li>
                                                     • No local resource usage
                                                 </li>
                                                 <li>
-                                                    • Can run multiple in
-                                                    parallel
+                                                    • Fully free tier (Cloudflare + Lambda)
+                                                </li>
+                                                <li>
+                                                    • Can run multiple in parallel
                                                 </li>
                                             </ul>
                                         </div>

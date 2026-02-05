@@ -15,6 +15,7 @@ Vectura is an open-source project to build a fully automated stock trading syste
 -   **Database (Supabase)**: Stores historical bars, trade decisions, portfolio state, and analytics.
 -   **State management (Zustand)**: In-memory state management for backtesting and web.
 -   **Broker (Alpaca)**: Trading API for orders and market data.
+-   **Cloud backtest (Cloudflare Worker + Lambda)**: Worker receives client requests, invokes Lambda, uses Durable Objects to route progress to the right WebSocket connection. Lambda runs the backtest and POSTs progress to Worker callback.
 
 ## Backtesting
 
@@ -28,42 +29,46 @@ Vectura includes a comprehensive backtesting system with two execution modes:
 -   No cloud costs - uses your local resources
 -   Supports running multiple backtests in parallel
 
-### Cloud Mode (AWS Lambda)
+### Cloud Mode (Cloudflare Worker + AWS Lambda)
 
--   Runs on AWS Lambda via WebSocket API Gateway
+-   **Client** connects to a Cloudflare Worker via WebSocket with a job ID
+-   **Worker** starts Lambda execution, returns job ID to client
+-   **Lambda** runs the backtest and POSTs progress to Worker callback
+-   **Worker** uses Durable Objects (keyed by job ID) to route progress to the right WebSocket → client
 -   Handles long-running backtests (up to 15 minutes)
--   Real-time progress streaming
--   Free tier eligible (1M requests/month, 400K GB-seconds/month)
+-   Real-time progress streaming through a single WebSocket connection
+-   Fully free-tier friendly: Cloudflare Workers (free tier) + AWS Lambda (free tier)
 -   Supports running multiple backtests in parallel
 
-### Quick AWS Setup
+**Before the migration:** Cloud Mode previously used AWS API Gateway WebSocket to connect the client directly to Lambda. WebSocket connection API Gateway is only free for the first 12 months of AWS account creation. The migration to Cloudflare Workers + Durable Objects provides a fully free solution with no time limit.
 
-For detailed AWS Lambda setup instructions, see [docs/aws-lambda-backtest-setup.md](docs/aws-lambda-backtest-setup.md).
+### Quick Cloud Setup
+
+For detailed setup instructions, see [docs/cloud-setup.md](docs/cloud-setup.md).
 
 **Quick steps:**
 
-1. Create IAM role with Lambda execution and API Gateway permissions
-2. Create Lambda function (`backtest-handler`) with Node.js 20.x runtime
-3. Create API Gateway WebSocket API with routes: `$connect`, `$disconnect`, `$default`
-4. Set environment variables in Lambda (Supabase, Alpaca, AlphaVantage keys)
-5. Set `NEXT_PUBLIC_WS_URL` in your `.env.local` to the WebSocket URL
-6. Build and deploy: `npm run deploy:lambda`
-7. Upload `backtest-lambda.zip` to Lambda
+1. Create AWS Lambda function (`backtest-handler`) with Node.js 24.x runtime
+2. Create IAM user for Worker (Lambda invoke only)
+3. Create Cloudflare Worker, configure Durable Objects for job routing
+4. Set Worker secrets (AWS credentials, `CALLBACK_SECRET`)
+5. Set environment variables in Lambda (Supabase, Alpaca, AlphaVantage, `CALLBACK_SECRET`)
+6. Set `NEXT_PUBLIC_WS_URL` in `.env.local` to your Worker WebSocket URL
+7. Build and deploy: `npm run deploy:lambda` (upload zip to Lambda), `cd worker && npm run deploy` (Worker)
 
 **Environment Variables for Cloud Mode:**
 
 ```env
-NEXT_PUBLIC_WS_URL=wss://YOUR_API_ID.execute-api.us-east-1.amazonaws.com/prod
+NEXT_PUBLIC_WS_URL=wss://vectura-progress-worker.YOUR_SUBDOMAIN.workers.dev
 ```
 
 ## Documentation
 
 Vectura includes comprehensive documentation pages accessible from the web interface:
 
--   **How the Backtest Works** (`/how-backtest-works`): Learn how to configure parameters, choose execution modes, understand the algorithm, and interpret results. Everything you need to know about using and understanding the backtest.
--   **Development Journey** (`/development-journey`): Read about the development process: from CSV files to Zustand, finding free APIs, implementing PDT rules, and optimizing performance from 7 hours to fast execution.
-
-These pages can be accessed from the homepage or directly via their routes.
+-   **How the Backtest Works** (`/how-backtest-works`): Learn how to configure parameters, choose execution modes (Local vs Cloud), understand the algorithm, and interpret results. Everything you need to know about using and understanding the backtest.
+-   **Development Journey** (`/development-journey`): Read about the development process: from CSV files to Zustand, finding free APIs, implementing PDT rules, optimizing performance from 7 hours to fast execution, and the migration from AWS API Gateway to Cloudflare Workers.
+-   **Cloud Setup** ([docs/cloud-setup.md](docs/cloud-setup.md)): Step-by-step guide to set up Cloud Mode (Cloudflare Worker + AWS Lambda).
 
 ## Getting started
 
@@ -145,8 +150,8 @@ npm run backtest
 
 **Cloud Mode Setup:**
 
--   Requires AWS Lambda and API Gateway setup (see [AWS Setup Guide](docs/aws-lambda-backtest-setup.md))
--   Set `NEXT_PUBLIC_WS_URL` in `.env.local` to your WebSocket API endpoint
+-   Requires AWS Lambda and Cloudflare Worker setup (see [Cloud Setup Guide](docs/cloud-setup.md))
+-   Set `NEXT_PUBLIC_WS_URL` in `.env.local` to your Cloudflare Worker URL
 
 ### Backtest Results
 

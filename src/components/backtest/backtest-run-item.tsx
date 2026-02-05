@@ -41,7 +41,9 @@ export function BacktestRunItem({
         return null;
     }
 
+    const isConnecting = run.status === "connecting";
     const isRunning = run.status === "running";
+    const isActive = isConnecting || isRunning;
     const isCompleted = run.status === "completed";
     const isError = run.status === "error";
     const isCancelled = run.status === "cancelled";
@@ -83,8 +85,8 @@ export function BacktestRunItem({
                         >
                             <BacktestEditDialog runId={runId} />
 
-                            {/* Cancel button - only show when running */}
-                            {isRunning && (
+                            {/* Cancel button - show when running or connecting */}
+                            {isActive && (
                                 <Button
                                     variant="ghost"
                                     size="icon"
@@ -139,9 +141,12 @@ export function BacktestRunItem({
                     )}
 
                     {/* Progress */}
-                    {isRunning && (
+                    {isActive && (
                         <div className="space-y-2">
-                            <BacktestProgress progress={run.progress} />
+                            <BacktestProgress
+                                progress={run.progress}
+                                connectingToServer={isConnecting}
+                            />
                         </div>
                     )}
 

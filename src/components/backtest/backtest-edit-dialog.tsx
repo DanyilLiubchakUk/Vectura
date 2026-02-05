@@ -59,7 +59,7 @@ export function BacktestEditDialog({ runId }: { runId: string }) {
     };
 
     const handleRun = async (values: BacktestFormValues) => {
-        if (run.status === "running") {
+        if (run.status === "running" || run.status === "connecting") {
             cancel();
         }
 

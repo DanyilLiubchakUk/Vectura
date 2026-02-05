@@ -224,6 +224,49 @@ export default function DevelopmentJourneyPage() {
 
                         <section className="space-y-3">
                             <h2 className="text-xl md:text-2xl font-bold">
+                                Cloud Architecture: API Gateway → Cloudflare Workers
+                            </h2>
+                            <div className="space-y-3 text-sm md:text-base text-muted-foreground">
+                                <p>
+                                    Cloud Mode initially used AWS API Gateway WebSocket to connect the client
+                                    directly to Lambda. The client would connect to the WebSocket, and Lambda
+                                    would push progress over that connection. This worked, but API Gateway is
+                                    only free for the first 12 months of AWS account creation - after that, costs
+                                    add up.
+                                </p>
+                                <h3 className="font-semibold mb-2 text-foreground">
+                                    The solution was to migrate to Cloudflare Workers. Now the flow is:
+                                </h3>
+                                <ol className="list-decimal list-inside space-y-2 ml-4">
+                                    <li>
+                                        Client POSTs to Worker <code className="text-xs bg-muted px-1 rounded">/start-backtest</code> →
+                                        Worker invokes Lambda and returns a job ID
+                                    </li>
+                                    <li>
+                                        Client opens a WebSocket to the Worker with that job ID
+                                    </li>
+                                    <li>
+                                        Worker uses Durable Objects (keyed by job ID) for stateful memory per backtest session
+                                    </li>
+                                    <li>
+                                        Lambda receives the same job ID. When it has progress, it POSTs to the
+                                        Worker <code className="text-xs bg-muted px-1 rounded">/callback</code> with the job ID
+                                    </li>
+                                    <li>
+                                        Worker routes the payload to the right Durable Object, which forwards
+                                        it to the correct WebSocket → the client gets progress in real time
+                                    </li>
+                                </ol>
+                                <p>
+                                    From the client's perspective, it's still a single WebSocket connection.
+                                    Cloudflare Workers and Durable Objects run on a fully free tier, so Cloud
+                                    Mode stays free indefinitely.
+                                </p>
+                            </div>
+                        </section>
+
+                        <section className="space-y-3">
+                            <h2 className="text-xl md:text-2xl font-bold">
                                 Technical Stack
                             </h2>
                             <Card>
@@ -269,10 +312,11 @@ export default function DevelopmentJourneyPage() {
                                                 </h3>
                                             </div>
                                             <ul className="space-y-1 text-sm text-muted-foreground">
-                                                <li>• AWS Lambda</li>
-                                                <li>• API Gateway</li>
-                                                <li>• WebSocket</li>
-                                                <li>• Free tier eligible</li>
+                                                <li>• AWS Lambda (backtest execution)</li>
+                                                <li>• Cloudflare Workers</li>
+                                                <li>• Durable Objects (job routing)</li>
+                                                <li>• WebSocket (progress streaming)</li>
+                                                <li>• Fully free tier</li>
                                             </ul>
                                         </div>
                                     </div>

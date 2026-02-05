@@ -11,9 +11,9 @@ export function useRanges() {
         try {
             setLoading(true);
             const response = await fetch(API_BASE);
-            const result = await response.json();
+            const result = (await response.json()) as { data?: SymbolRange[] };
             if (result.data) {
-                setRanges(result.data.map((r: SymbolRange) => ({ ...r })));
+                setRanges(result.data.map((r) => ({ ...r })));
             }
         } catch (error) {
         } finally {
