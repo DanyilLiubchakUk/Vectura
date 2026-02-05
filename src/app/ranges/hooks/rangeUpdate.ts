@@ -1,6 +1,6 @@
 import { API_BASE } from "@/app/ranges/constants";
 import { useCallback } from "react";
-import type { BacktestProgressEvent } from "@/backtest/types";
+import type { BacktestProgressEvent, SymbolRange } from "@/backtest/types";
 import type { RangeItem } from "@/app/ranges/types";
 
 function createResetState(symbol: string): Partial<RangeItem> {
@@ -72,10 +72,12 @@ export function useRangeUpdate(
                                 }
                                 return null;
                             })
-                            .then((result) => {
+                            .then((value: unknown) => {
+                                const result = value as { data?: SymbolRange[] } | null;
                                 if (
                                     result &&
                                     result.data &&
+                                    Array.isArray(result.data) &&
                                     result.data.length > 0
                                 ) {
                                     const updatedRange = result.data[0];

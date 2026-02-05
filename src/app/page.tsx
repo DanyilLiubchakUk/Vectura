@@ -141,7 +141,7 @@ export default function Page() {
                                         </div>
                                     </div>
                                     <CardDescription>
-                                        Runs on AWS Lambda
+                                        Runs via Cloudflare Worker + AWS Lambda
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-2 md:space-y-3">

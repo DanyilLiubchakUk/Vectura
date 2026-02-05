@@ -41,13 +41,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
+        const body = (await request.json()) as { operation?: string;[key: string]: unknown };
         const { operation, ...params } = body;
 
         switch (operation) {
             case "validateDateRange": {
-                const { symbol, requestedStart, requestedEnd } = params;
-                if (!symbol || !requestedStart || !requestedEnd) {
+                const symbol = params.symbol;
+                const requestedStart = params.requestedStart;
+                const requestedEnd = params.requestedEnd;
+                if (!symbol || !requestedStart || !requestedEnd || typeof symbol !== "string" || typeof requestedStart !== "string" || typeof requestedEnd !== "string") {
                     return createBadRequestResponse(
                         "Missing symbol, requestedStart, or requestedEnd"
                     );
@@ -67,9 +69,9 @@ export async function POST(request: NextRequest) {
             }
 
             case "findNearestMarketDays": {
-                const { symbol, day } = params;
-
-                if (!symbol || !day) {
+                const symbol = params.symbol;
+                const day = params.day;
+                if (!symbol || !day || typeof symbol !== "string" || typeof day !== "string") {
                     return createBadRequestResponse("Missing symbol or day");
                 }
 
@@ -78,8 +80,9 @@ export async function POST(request: NextRequest) {
             }
 
             case "checkDayDirectly": {
-                const { symbol, day } = params;
-                if (!symbol || !day) {
+                const symbol = params.symbol;
+                const day = params.day;
+                if (!symbol || !day || typeof symbol !== "string" || typeof day !== "string") {
                     return createBadRequestResponse("Missing symbol or day");
                 }
 
@@ -89,8 +92,9 @@ export async function POST(request: NextRequest) {
                     );
                     const isOpen = await isMarketTradingDay(symbol, day);
                     return createSuccessResponse(isOpen);
-                } catch (error: any) {
-                    if (error?.code === 401 || error?.status === 401) {
+                } catch (error: unknown) {
+                    const err = error as { code?: number; status?: number };
+                    if (err?.code === 401 || err?.status === 401) {
                         return NextResponse.json(
                             {
                                 error: "Authentication error: Unable to check market day. Please verify API credentials.",
@@ -102,7 +106,7 @@ export async function POST(request: NextRequest) {
                     return NextResponse.json(
                         {
                             error: "Error checking market day. Please try again.",
-                            errorCode: error?.code || error?.status || 500,
+                            errorCode: err?.code ?? err?.status ?? 500,
                         },
                         { status: 500 }
                     );
@@ -110,9 +114,14 @@ export async function POST(request: NextRequest) {
             }
 
             case "updateRange": {
-                const { symbol, haveFrom, haveTo } = params;
-                if (!symbol) {
+                const symbol = params.symbol;
+                const haveFrom = params.haveFrom;
+                const haveTo = params.haveTo;
+                if (!symbol || typeof symbol !== "string") {
                     return createBadRequestResponse("Missing symbol");
+                }
+                if (typeof haveFrom !== "string" || typeof haveTo !== "string") {
+                    return createBadRequestResponse("Missing haveFrom or haveTo");
                 }
 
                 const currentRange = await readSymbolRange(symbol);
@@ -153,8 +162,8 @@ export async function POST(request: NextRequest) {
 
                 const updatedRange = await updateSymbolRangeDates(
                     symbol,
-                    validation.adjustedStart,
-                    validation.adjustedEnd
+                    validation.adjustedStart ?? null,
+                    validation.adjustedEnd ?? null
                 );
 
                 if (validation.needsDownload && updatedRange) {
@@ -185,8 +194,8 @@ export async function POST(request: NextRequest) {
             }
 
             case "deleteSymbol": {
-                const { symbol } = params;
-                if (!symbol) {
+                const symbol = params.symbol;
+                if (!symbol || typeof symbol !== "string") {
                     return createBadRequestResponse("Missing symbol");
                 }
 
@@ -195,8 +204,10 @@ export async function POST(request: NextRequest) {
             }
 
             case "downloadMissingData": {
-                const { symbol, from, to } = params;
-                if (!symbol || !from || !to) {
+                const symbol = params.symbol;
+                const from = params.from;
+                const to = params.to;
+                if (!symbol || !from || !to || typeof symbol !== "string" || typeof from !== "string" || typeof to !== "string") {
                     return createBadRequestResponse(
                         "Missing symbol, from, or to"
                     );

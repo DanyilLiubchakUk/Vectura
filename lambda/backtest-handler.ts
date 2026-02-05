@@ -1,97 +1,181 @@
-import {
-    ApiGatewayManagementApiClient,
-    PostToConnectionCommand,
-} from "@aws-sdk/client-apigatewaymanagementapi";
 import { runBacktestCore } from "@/backtest/core/engine";
-import { DEFAULT_AWS_REGION } from "@/constants/runtime";
-import type {
-    APIGatewayProxyWebsocketHandlerV2,
-    APIGatewayProxyWebsocketEventV2,
-} from "aws-lambda";
 import type { BacktestConfig, BacktestProgressEvent } from "@/backtest/types";
 
-const apiGatewayEndpoint = process.env.API_GATEWAY_ENDPOINT;
-const awsRegion = DEFAULT_AWS_REGION;
+const callbackSecret = process.env.CALLBACK_SECRET || "";
 
-const activeConnections = new Set<string>();
-const activeBacktests = new Map<string, AbortController>();
+let sendChain: Promise<void> = Promise.resolve();
 
-const clientCache = new Map<string, ApiGatewayManagementApiClient>();
-
-function getClient(endpoint: string): ApiGatewayManagementApiClient {
-    let client = clientCache.get(endpoint);
-    if (!client) {
-        client = new ApiGatewayManagementApiClient({
-            region: awsRegion,
-            endpoint: endpoint,
-        });
-        clientCache.set(endpoint, client);
-    }
-    return client;
-}
-
-function getEndpoint(): string {
-    if (apiGatewayEndpoint) return apiGatewayEndpoint;
-
-    throw new Error("Cannot determine API Gateway endpoint");
-}
-
-async function sendToConnection(
-    connectionId: string,
-    data: any,
-    endpoint: string
-): Promise<boolean> {
-    if (!activeConnections.has(connectionId)) {
-        return false;
-    }
-
-    try {
-        const client = getClient(endpoint);
-        await client.send(
-            new PostToConnectionCommand({
-                ConnectionId: connectionId,
-                Data: JSON.stringify(data),
-            })
-        );
-        return true;
-    } catch (error: any) {
-        const statusCode = error?.$metadata?.httpStatusCode;
-        if (statusCode === 410 || statusCode === 400) {
-            // console.log(
-            //     `[Lambda] Connection ${connectionId} gone (${statusCode})`
-            // );
-            activeConnections.delete(connectionId);
-        } else {
-            // console.error(
-            //     `[Lambda] Failed to send to ${connectionId}:`,
-            //     error.message
-            // );
-        }
-        return false;
-    }
-}
-
-async function runBacktest(
-    connectionId: string,
-    config: BacktestConfig,
-    endpoint: string
+async function postCallback(
+    backtestId: string,
+    callbackUrl: string | undefined,
+    payload: Record<string, unknown>
 ): Promise<void> {
-    // console.log(
-    //     `[Lambda] Starting backtest for ${config.stock} from ${config.startDate} to ${config.endDate}`
-    // );
+    if (!callbackUrl || !callbackSecret) return;
+    const body = JSON.stringify({ ...payload, jobId: backtestId });
+    const prev = sendChain;
+    sendChain = prev.then(async () => {
+        try {
+            const res = await fetch(callbackUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Lambda-Secret": callbackSecret,
+                },
+                body,
+            });
+            if (!res.ok) {
+                console.error("[Lambda] callback POST failed", res.status);
+            }
+        } catch (e) {
+            console.error("[Lambda] callback POST error:", e);
+        }
+    });
+    await sendChain;
+}
+
+const CHUNK_SIZE = 800;
+const EXEC_CHUNK_SIZE = 200;
+const MAX_CHUNK_BYTES = 100 * 1024;
+const MAX_MESSAGE_SIZE = 100 * 1024;
+
+async function postResultChunked(
+    backtestId: string,
+    callbackUrl: string | undefined,
+    result: Record<string, unknown>
+): Promise<void> {
+    if (!callbackUrl || !callbackSecret) return;
+    const resultData = { type: "result" as const, ...result };
+    const resultSize = JSON.stringify(resultData).length;
+    const chartData = result.chartData as Record<string, unknown> | undefined;
+    const hasChartData = chartData && typeof chartData === "object";
+
+    if (!hasChartData && resultSize <= MAX_MESSAGE_SIZE) {
+        await postCallback(backtestId, callbackUrl, resultData);
+        await postCallback(backtestId, callbackUrl, { type: "result_complete" });
+        return;
+    }
+
+    const { chartData: _cd, ...resultWithoutChart } = result;
+    await postCallback(backtestId, callbackUrl, { type: "result", ...resultWithoutChart });
+
+    if (chartData && typeof chartData === "object") {
+        const priceData = (chartData.priceData as unknown[]) || [];
+        const equityData = (chartData.equityData as unknown[]) || [];
+        const cashData = (chartData.cashData as unknown[]) || [];
+        const executions = (chartData.executions as unknown[]) || [];
+
+        for (let i = 0; i < priceData.length; i += CHUNK_SIZE) {
+            await postCallback(backtestId, callbackUrl, {
+                type: "result_chunk",
+                dataType: "priceData",
+                chunkIndex: Math.floor(i / CHUNK_SIZE),
+                totalChunks: Math.ceil(priceData.length / CHUNK_SIZE),
+                chartData: { priceData: priceData.slice(i, i + CHUNK_SIZE) },
+            });
+        }
+        for (let i = 0; i < equityData.length; i += CHUNK_SIZE) {
+            await postCallback(backtestId, callbackUrl, {
+                type: "result_chunk",
+                dataType: "equityData",
+                chunkIndex: Math.floor(i / CHUNK_SIZE),
+                totalChunks: Math.ceil(equityData.length / CHUNK_SIZE),
+                chartData: { equityData: equityData.slice(i, i + CHUNK_SIZE) },
+            });
+        }
+        for (let i = 0; i < cashData.length; i += CHUNK_SIZE) {
+            await postCallback(backtestId, callbackUrl, {
+                type: "result_chunk",
+                dataType: "cashData",
+                chunkIndex: Math.floor(i / CHUNK_SIZE),
+                totalChunks: Math.ceil(cashData.length / CHUNK_SIZE),
+                chartData: { cashData: cashData.slice(i, i + CHUNK_SIZE) },
+            });
+        }
+        for (let i = 0; i < executions.length; i += EXEC_CHUNK_SIZE) {
+            const chunk = executions.slice(i, i + EXEC_CHUNK_SIZE);
+            let payload: Record<string, unknown> = {
+                type: "result_chunk",
+                dataType: "executions",
+                chunkIndex: Math.floor(i / EXEC_CHUNK_SIZE),
+                totalChunks: Math.ceil(executions.length / EXEC_CHUNK_SIZE),
+                chartData: { executions: chunk },
+            };
+            if (JSON.stringify(payload).length > MAX_CHUNK_BYTES) {
+                const safeChunk = executions.slice(i, i + 50);
+                payload = {
+                    type: "result_chunk",
+                    dataType: "executions",
+                    chunkIndex: Math.floor(i / 50),
+                    totalChunks: Math.ceil(executions.length / 50),
+                    chartData: { executions: safeChunk },
+                };
+                i += 50 - EXEC_CHUNK_SIZE;
+            }
+            await postCallback(backtestId, callbackUrl, payload);
+        }
+    }
+    await postCallback(backtestId, callbackUrl, { type: "result_complete" });
+}
+
+export interface DirectInvokeEvent {
+    jobId?: string;
+    backtestId?: string;
+    config: BacktestConfig;
+    callbackUrl?: string;
+    cancelCheckUrl?: string;
+}
+
+export interface DirectInvokeResult {
+    backtestId: string;
+    status: "done" | "error";
+    result?: unknown;
+    error?: string;
+}
+
+export async function handler(event: DirectInvokeEvent): Promise<DirectInvokeResult> {
+    const backtestId = event.jobId ?? event.backtestId;
+    const { config, callbackUrl, cancelCheckUrl } = event;
+
+    if (!backtestId || !config) {
+        return {
+            backtestId: backtestId || "unknown",
+            status: "error",
+            error: "Missing backtestId or config",
+        };
+    }
 
     const abortController = new AbortController();
-    activeBacktests.set(connectionId, abortController);
+    const LAMBDA_MAX_MS = 14.75 * 60 * 1000;
+    let timedOut = false;
+    const timeoutId = setTimeout(() => {
+        timedOut = true;
+        abortController.abort();
+    }, LAMBDA_MAX_MS);
 
-    const onProgress = async (event: BacktestProgressEvent) => {
-        if (abortController.signal.aborted || !activeConnections.has(connectionId)) {
+    const checkCancelRequested = async (): Promise<boolean> => {
+        if (!cancelCheckUrl || !callbackSecret) return false;
+        try {
+            const res = await fetch(`${cancelCheckUrl}?jobId=${backtestId}`, {
+                headers: { "X-Lambda-Secret": callbackSecret },
+            });
+            if (!res.ok) return false;
+            const data = (await res.json()) as { cancelRequested?: boolean };
+            return !!data.cancelRequested;
+        } catch {
+            return false;
+        }
+    };
+
+    const onProgress = async (evt: BacktestProgressEvent) => {
+        if (abortController.signal.aborted) return;
+        const cancelled = await checkCancelRequested();
+        if (cancelled) {
+            abortController.abort();
             return;
         }
-        await sendToConnection(
-            connectionId,
-            { type: "progress", ...event },
-            endpoint
-        );
+        try {
+            await postCallback(backtestId, callbackUrl, { type: "progress", ...evt });
+        } catch { }
     };
 
     try {
@@ -101,286 +185,42 @@ async function runBacktest(
             abortController.signal
         );
 
+        clearTimeout(timeoutId);
         if (abortController.signal.aborted) {
-            await sendToConnection(connectionId, { type: "cancelled" }, endpoint);
-            activeBacktests.delete(connectionId);
-            return;
+            if (timedOut) {
+                const msg = "Backtest exceeded 15 minute limit. Please use a shorter date range.";
+                await postCallback(backtestId, callbackUrl, { type: "error", error: msg });
+            } else {
+                await postCallback(backtestId, callbackUrl, { type: "cancelled" });
+            }
+            return { backtestId, status: "done" };
         }
 
-        if (!activeConnections.has(connectionId)) {
-            console.error(`[Lambda] Connection ${connectionId} closed, cannot send result`);
-            activeBacktests.delete(connectionId);
-            return;
-        }
+        await postResultChunked(backtestId, callbackUrl, result);
+        await postCallback(backtestId, callbackUrl, { type: "done" });
 
-        const resultData = { type: "result", ...result };
-        const resultSize = JSON.stringify(resultData).length;
-        const hasChartData = result.chartData && typeof result.chartData === 'object';
-        const MAX_MESSAGE_SIZE = 100 * 1024; // 100KB to be safe
-
-        if (hasChartData || resultSize > MAX_MESSAGE_SIZE) {
-            // Send base result without chartData
-            const { chartData, ...resultWithoutChart } = result;
-            const baseResult = { type: "result", ...resultWithoutChart };
-
-            const baseSent = await sendToConnection(connectionId, baseResult, endpoint);
-            if (!baseSent) {
-                console.error(`[Lambda] Failed to send base result`);
-                activeBacktests.delete(connectionId);
-                return;
-            }
-
-            // Send chartData in chunks if it exists
-            if (chartData && typeof chartData === 'object') {
-                const chartDataObj = chartData as { priceData?: any[], equityData?: any[], cashData?: any[], executions?: any[] };
-                const priceData = chartDataObj.priceData || [];
-                const equityData = chartDataObj.equityData || [];
-                const cashData = chartDataObj.cashData || [];
-                const executions = chartDataObj.executions || [];
-
-                // Send priceData in chunks of 800
-                if (priceData.length > 0) {
-                    const CHUNK_SIZE = 800;
-                    const totalChunks = Math.ceil(priceData.length / CHUNK_SIZE);
-
-                    for (let i = 0; i < priceData.length; i += CHUNK_SIZE) {
-                        const chunk = priceData.slice(i, i + CHUNK_SIZE);
-                        const chunkIndex = Math.floor(i / CHUNK_SIZE);
-                        const chunkSent = await sendToConnection(connectionId, {
-                            type: "result_chunk",
-                            dataType: "priceData",
-                            chunkIndex,
-                            totalChunks,
-                            chartData: { priceData: chunk },
-                        }, endpoint);
-                        if (!chunkSent) {
-                            console.error(`[Lambda] Failed to send priceData chunk`);
-                            activeBacktests.delete(connectionId);
-                            return;
-                        }
-                    }
-                }
-
-                // Send equityData in chunks of 800
-                if (equityData.length > 0) {
-                    const CHUNK_SIZE = 800;
-                    const totalChunks = Math.ceil(equityData.length / CHUNK_SIZE);
-
-                    for (let i = 0; i < equityData.length; i += CHUNK_SIZE) {
-                        const chunk = equityData.slice(i, i + CHUNK_SIZE);
-                        const chunkIndex = Math.floor(i / CHUNK_SIZE);
-                        const chunkSent = await sendToConnection(connectionId, {
-                            type: "result_chunk",
-                            dataType: "equityData",
-                            chunkIndex,
-                            totalChunks,
-                            chartData: { equityData: chunk },
-                        }, endpoint);
-                        if (!chunkSent) {
-                            console.error(`[Lambda] Failed to send equityData chunk`);
-                            activeBacktests.delete(connectionId);
-                            return;
-                        }
-                    }
-                }
-
-                // Send cashData in chunks of 800
-                if (cashData.length > 0) {
-                    const CHUNK_SIZE = 800;
-                    const totalChunks = Math.ceil(cashData.length / CHUNK_SIZE);
-
-                    for (let i = 0; i < cashData.length; i += CHUNK_SIZE) {
-                        const chunk = cashData.slice(i, i + CHUNK_SIZE);
-                        const chunkIndex = Math.floor(i / CHUNK_SIZE);
-                        const chunkSent = await sendToConnection(connectionId, {
-                            type: "result_chunk",
-                            dataType: "cashData",
-                            chunkIndex,
-                            totalChunks,
-                            chartData: { cashData: chunk },
-                        }, endpoint);
-                        if (!chunkSent) {
-                            console.error(`[Lambda] Failed to send cashData chunk`);
-                            activeBacktests.delete(connectionId);
-                            return;
-                        }
-                    }
-                }
-
-                // Send executions in chunks of 200
-                if (executions.length > 0) {
-                    const MAX_CHUNK_SIZE_BYTES = 100 * 1024;
-                    const CHUNK_SIZE = 200;
-                    const totalChunks = Math.ceil(executions.length / CHUNK_SIZE);
-
-                    for (let i = 0; i < executions.length; i += CHUNK_SIZE) {
-                        const chunk = executions.slice(i, i + CHUNK_SIZE);
-                        const chunkIndex = Math.floor(i / CHUNK_SIZE);
-                        const chunkData = {
-                            type: "result_chunk",
-                            dataType: "executions",
-                            chunkIndex,
-                            totalChunks,
-                            chartData: { executions: chunk },
-                        };
-
-                        // Safety check for chunk size
-                        if (JSON.stringify(chunkData).length > MAX_CHUNK_SIZE_BYTES) {
-                            const safeChunkSize = 50;
-                            const safeChunk = executions.slice(i, i + safeChunkSize);
-                            const safeTotalChunks = Math.ceil(executions.length / safeChunkSize);
-                            const safeChunkSent = await sendToConnection(connectionId, {
-                                type: "result_chunk",
-                                dataType: "executions",
-                                chunkIndex: Math.floor(i / safeChunkSize),
-                                totalChunks: safeTotalChunks,
-                                chartData: { executions: safeChunk },
-                            }, endpoint);
-                            if (!safeChunkSent) {
-                                console.error(`[Lambda] Failed to send executions chunk`);
-                                activeBacktests.delete(connectionId);
-                                return;
-                            }
-                            i += safeChunkSize - CHUNK_SIZE;
-                            continue;
-                        }
-
-                        const chunkSent = await sendToConnection(connectionId, chunkData, endpoint);
-                        if (!chunkSent) {
-                            console.error(`[Lambda] Failed to send executions chunk`);
-                            activeBacktests.delete(connectionId);
-                            return;
-                        }
-                    }
-                }
-
-                // Send completion message - this tells the frontend to close the connection
-                await sendToConnection(connectionId, { type: "result_complete" }, endpoint);
-            }
-        } else {
-            const resultSent = await sendToConnection(connectionId, resultData, endpoint);
-            if (!resultSent) {
-                console.error(`[Lambda] Failed to send result`);
-            }
-        }
-
-        activeBacktests.delete(connectionId);
-    } catch (error) {
-        activeBacktests.delete(connectionId);
+        return { backtestId, status: "done", result };
+    } catch (err) {
+        clearTimeout(timeoutId);
+        const errMsg =
+            timedOut
+                ? "Backtest exceeded 15 minute limit. Please use a shorter date range."
+                : err instanceof Error ? err.message : String(err);
 
         if (
             abortController.signal.aborted ||
-            (error instanceof Error && error.message === "Backtest cancelled")
+            (err instanceof Error && err.message === "Backtest cancelled")
         ) {
-            await sendToConnection(
-                connectionId,
-                { type: "cancelled" },
-                endpoint
-            );
-            return;
+            if (timedOut) {
+                await postCallback(backtestId, callbackUrl, { type: "error", error: errMsg });
+            } else {
+                await postCallback(backtestId, callbackUrl, { type: "cancelled" });
+            }
+            return { backtestId, status: "done" };
         }
 
-        console.error(`[Lambda] Backtest error: ${error instanceof Error ? error.message : String(error)}`);
-        await sendToConnection(
-            connectionId,
-            {
-                type: "error",
-                error: error instanceof Error ? error.message : "Unknown error",
-            },
-            endpoint
-        );
-        throw error;
+        await postCallback(backtestId, callbackUrl, { type: "error", error: errMsg });
+
+        return { backtestId, status: "error", error: errMsg };
     }
 }
-
-export const handler: APIGatewayProxyWebsocketHandlerV2 = async (
-    event: APIGatewayProxyWebsocketEventV2
-) => {
-    const requestContext = event.requestContext;
-    const connectionId = requestContext?.connectionId;
-    const routeKey = requestContext?.routeKey || "$default";
-
-    // console.log(`[Lambda] ${routeKey} from ${connectionId}`);
-
-    if (!connectionId) {
-        console.error(`[Lambda] Missing connectionId`);
-        return { statusCode: 400, body: "Missing connectionId" };
-    }
-
-    try {
-        const endpoint = getEndpoint();
-
-        switch (routeKey) {
-            case "$connect":
-                activeConnections.add(connectionId);
-                console.log(
-                    `[Lambda] Connected: ${connectionId}, active: ${activeConnections.size}`
-                );
-                return { statusCode: 200, body: "Connected" };
-
-            case "$disconnect":
-                activeConnections.delete(connectionId);
-                // Cancel any active backtest for this connection
-                const abortController = activeBacktests.get(connectionId);
-                if (abortController) {
-                    abortController.abort();
-                    activeBacktests.delete(connectionId);
-                }
-                console.log(
-                    `[Lambda] Disconnected: ${connectionId}, active: ${activeConnections.size}`
-                );
-                return { statusCode: 200, body: "Disconnected" };
-
-            case "$default": {
-                // This handles the case where $connect happened in a different Lambda invocation
-                if (!activeConnections.has(connectionId)) {
-                    activeConnections.add(connectionId);
-                }
-
-                const body = JSON.parse(event.body || "{}");
-
-                if (body.type === "start_backtest" && body.mode === "cloud") {
-                    console.log(
-                        `[Lambda] Backtest request:`,
-                        JSON.stringify(body.config)
-                    );
-
-                    await runBacktest(connectionId, body.config, endpoint);
-
-                    return { statusCode: 200, body: "Backtest completed" };
-                }
-
-                if (body.type === "cancel_backtest") {
-                    const abortController = activeBacktests.get(connectionId);
-                    if (abortController) {
-                        abortController.abort();
-                        activeBacktests.delete(connectionId);
-                        await sendToConnection(
-                            connectionId,
-                            { type: "cancelled" },
-                            endpoint
-                        );
-                    }
-                    return { statusCode: 200, body: "Cancellation requested" };
-                }
-
-                // console.log(`[Lambda] Unknown message type: ${body.type}`);
-                return { statusCode: 400, body: "Unknown message type" };
-            }
-
-            default:
-                return { statusCode: 200, body: "OK" };
-        }
-    } catch (error) {
-        // console.error(
-        //     `[Lambda] Handler error:`,
-        //     error instanceof Error ? error.message : error
-        // );
-        return {
-            statusCode: 500,
-            body: JSON.stringify({
-                error: error instanceof Error ? error.message : "Unknown error",
-            }),
-        };
-    }
-};

@@ -8,10 +8,35 @@ import type { BacktestProgressEvent } from "@/backtest/types";
 
 export function BacktestProgress({
     progress,
+    connectingToServer = false,
 }: {
     progress: BacktestProgressEvent | null;
+    connectingToServer?: boolean;
 }) {
     const { stages, hasStages } = useBacktestProgressStages(progress);
+
+    if (connectingToServer) {
+        return (
+            <Card className="mt-4">
+                <CardHeader>
+                    <CardTitle className="text-lg">Backtest Progress</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center gap-4 rounded-lg p-3 bg-primary/5 border border-primary/20">
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-primary">
+                                Connecting to execution server...
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Starting the cloud backtest. This may take up to a
+                                minute—please wait.
+                            </p>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
 
     if (!hasStages) {
         return null;

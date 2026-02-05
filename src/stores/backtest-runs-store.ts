@@ -5,7 +5,7 @@ import type {
     BacktestResult,
 } from "@/backtest/types";
 
-export type BacktestRunStatus = "running" | "completed" | "error" | "cancelled";
+export type BacktestRunStatus = "connecting" | "running" | "completed" | "error" | "cancelled";
 
 export interface BacktestRun {
     id: string;
@@ -18,6 +18,7 @@ export interface BacktestRun {
     createdAt: string;
     abortController?: AbortController;
     wsRef?: WebSocket | null;
+    cloudBacktestId?: string | null;
     readerRef?: ReadableStreamDefaultReader<Uint8Array> | null;
 }
 
@@ -39,10 +40,11 @@ export const useBacktestRunsStore = create<BacktestRunsStore>((set, get) => ({
         const id = `backtest-${Date.now()}-${Math.random()
             .toString(36)
             .substr(2, 9)}`;
+        const initialStatus = config.executionMode === "cloud" ? "connecting" : "running";
         const newRun: BacktestRun = {
             id,
             name,
-            status: "running",
+            status: initialStatus,
             config,
             progress: null,
             result: null,
@@ -65,9 +67,22 @@ export const useBacktestRunsStore = create<BacktestRunsStore>((set, get) => ({
         const run = get().runs.find((r) => r.id === id);
         if (run) {
             // Cancel WebSocket if exists
-            if (run.wsRef) {
+            if (run.wsRef && run.cloudBacktestId) {
+                const workerBase = typeof process !== "undefined" && process.env?.NEXT_PUBLIC_WS_URL
+                    ? process.env.NEXT_PUBLIC_WS_URL.replace(/^wss:/, "https:").replace(/^ws:/, "http:")
+                    : "";
+                if (workerBase) {
+                    fetch(`${workerBase.replace(/\/$/, "")}/cancel?jobId=${run.cloudBacktestId}`, {
+                        method: "POST",
+                    }).catch(() => {});
+                }
                 try {
-                    run.wsRef.send(JSON.stringify({ type: "cancel_backtest" }));
+                    run.wsRef.send(
+                        JSON.stringify({
+                            type: "cancel_backtest",
+                            backtestId: run.cloudBacktestId,
+                        })
+                    );
                 } catch {
                     // Ignore errors
                 }
@@ -84,13 +99,14 @@ export const useBacktestRunsStore = create<BacktestRunsStore>((set, get) => ({
             get().updateRun(id, {
                 status: "cancelled",
                 error: "Backtest cancelled",
+                cloudBacktestId: null,
             });
         }
     },
     removeRun: (id) => {
         // Cancel the run first if it's running
         const run = get().runs.find((r) => r.id === id);
-        if (run && run.status === "running") {
+        if (run && (run.status === "running" || run.status === "connecting")) {
             get().cancelRun(id);
         }
         // Then remove it from the list
