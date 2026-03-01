@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "cockroachdb"
+}
+
+// ---------------------------------------------------------------------------
+// Backtest tables (from bt_symbol_ranges, bt_bars_daily)
+// ---------------------------------------------------------------------------
+
+model SymbolRange {
+  symbol             String   @id
+  haveFrom           DateTime? @map("have_from") @db.Date
+  haveTo             DateTime? @map("have_to") @db.Date
+  firstAvailableDay  DateTime? @map("first_available_day") @db.Date
+  splits             Json     @default("[]")
+  lastSplitCheck     DateTime? @map("last_split_check") @db.Date
+  updatedAt          DateTime @default(now()) @map("updated_at")
+
+  @@map("symbol_ranges")
+}
+
+model BarsDaily {
+  symbol   String   @db.String
+  day      DateTime @db.Date
+  data     Bytes
+  records  Int
+  startTs  BigInt   @map("start_ts")
+  endTs    BigInt   @map("end_ts")
+
+  @@id([symbol, day])
+  @@map("bars_daily")
+}
+
+// ---------------------------------------------------------------------------
+// Optional users table (WorkOS user id; cached display info)
+// ---------------------------------------------------------------------------
+
+model User {
+  userId   String   @id @map("user_id")
+  email    String?
+  name     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tradingAgents TradingAgent[]
+
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Trading Agent platform
+// ---------------------------------------------------------------------------
+
+model TradingAgent {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @map("agent_id") @db.Uuid
+  userId             String    @map("user_id")
+  name               String
+  status             String    // ACTIVE | PAUSED | ERROR | DELETED
+  symbol             String
+  alpacaEncrypted    String    @map("alpaca_encrypted")
+  alpacaAccountId    String    @unique @map("alpaca_account_id")
+  alpacaAccountType  String    @default("live") @map("alpaca_account_type") // paper | live
+  strategyParams     Json      @map("strategy_params")
+  riskLimits         Json      @default("{}") @map("risk_limits")
+  lastErrorAt        DateTime? @map("last_error_at")
+  lastErrorCode      String?   @map("last_error_code")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user              User?               @relation(fields: [userId], references: [userId])
+  tradeExecutions   TradeExecution[]
+  tradeHistories    TradeHistory[]
+  accountSnapshots  AccountSnapshot[]
+  positionSnapshots PositionSnapshot[]
+
+  @@index([status])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("trading_agents")
+}
+
+model TradeExecution {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @map("execution_id") @db.Uuid
+  agentId       String    @map("agent_id") @db.Uuid
+  minuteSlot    DateTime  @map("minute_slot")
+  status        String    // RUNNING | SUCCESS | PARTIAL_FAILURE | FAILED
+  startedAt     DateTime  @default(now()) @map("started_at")
+  finishedAt    DateTime? @map("finished_at")
+  ordersPlaced  Int       @default(0) @map("orders_placed")
+  errorCode     String?   @map("error_code")
+  errorMessage  String?   @map("error_message")
+
+  agent         TradingAgent   @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  executionLogs ExecutionLog[]
+
+  @@unique([agentId, minuteSlot])
+  @@index([agentId, minuteSlot(sort: Desc)])
+  @@map("trade_executions")
+}
+
+model TradeHistory {
+  agentId        String    @map("agent_id") @db.Uuid
+  tradeId        String    @map("trade_id")
+  timestamp      DateTime  @map("timestamp")
+  side           String    // buy | sell
+  symbol         String
+  qty            Decimal   @db.Decimal
+  price          Decimal   @db.Decimal
+  alpacaOrderId  String?   @map("alpaca_order_id")
+  clientOrderId  String    @map("client_order_id")
+  closeTradeId   String?   @map("close_trade_id")
+
+  agent          TradingAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@id([agentId, tradeId])
+  @@unique([agentId, clientOrderId])
+  @@index([agentId, timestamp(sort: Desc)])
+  @@map("trade_history")
+}
+
+model AccountSnapshot {
+  agentId           String    @map("agent_id") @db.Uuid
+  date              DateTime  @db.Date
+  equity            Decimal   @db.Decimal
+  cash              Decimal   @db.Decimal
+  equityMax         Decimal   @map("equity_max") @db.Decimal
+  cashMax           Decimal   @map("cash_max") @db.Decimal
+  pdtDaytradeCount  Int       @default(0) @map("pdt_daytrade_count")
+  pdtDays           Json      @default("[]") @map("pdt_days")
+  sessionStart      DateTime? @map("session_start")
+  sessionEnd        DateTime? @map("session_end")
+
+  agent             TradingAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@id([agentId, date])
+  @@map("account_snapshots")
+}
+
+model PositionSnapshot {
+  agentId     String    @map("agent_id") @db.Uuid
+  snapshotAt  DateTime  @map("snapshot_at")
+  positions   Json      @default("[]")
+  cash        Decimal   @db.Decimal
+  equity      Decimal   @db.Decimal
+
+  agent       TradingAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@id([agentId, snapshotAt])
+  @@map("position_snapshots")
+}
+
+model ExecutionLog {
+  executionId String    @map("execution_id") @db.Uuid
+  seqId       Int       @map("seq_id")
+  level       String
+  message     String?
+  code        String?
+  details     Json?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  execution   TradeExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@id([executionId, seqId])
+  @@map("execution_logs")
+}
