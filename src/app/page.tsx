@@ -23,11 +23,11 @@ import Link from "next/link";
 
 export default function Page() {
     return (
-        <div className="min-h-screen flex flex-col">
+        <div className="min-h-screen flex flex-col min-w-0">
             <AppHeader title="Trading Strategy Platform" />
 
-            <main className="flex-1 container mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-12">
-                <div className="max-w-5xl mx-auto space-y-6 md:space-y-8 lg:space-y-10">
+            <main className="flex-1 container mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-12 min-w-0 w-full overflow-x-hidden">
+                <div className="max-w-5xl mx-auto space-y-6 md:space-y-8 lg:space-y-10 min-w-0">
                     {/* Hero Section */}
                     <div className="text-center space-y-3 md:space-y-4">
                         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">

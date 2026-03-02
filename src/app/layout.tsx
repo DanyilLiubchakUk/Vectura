@@ -141,7 +141,7 @@ export default function RootLayout({
         >
             <body
                 className={cn(
-                    "min-h-full bg-background text-foreground antialiased"
+                    "min-h-full min-w-0 bg-background text-foreground antialiased overflow-x-hidden"
                 )}
             >
                 <AuthKitProvider>
