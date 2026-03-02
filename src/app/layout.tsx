@@ -1,3 +1,4 @@
+import { AuthKitProvider } from "@workos-inc/authkit-nextjs/components";
 import { SparksCanvas } from "@/components/sparks/SparksCanvas";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Inter } from "next/font/google";
@@ -143,10 +144,15 @@ export default function RootLayout({
                     "min-h-full bg-background text-foreground antialiased"
                 )}
             >
-                <ThemeProvider defaultTheme="system" storageKey="vectura-theme">
-                    <SparksCanvas />
-                    {children}
-                </ThemeProvider>
+                <AuthKitProvider>
+                    <ThemeProvider
+                        defaultTheme="system"
+                        storageKey="vectura-theme"
+                    >
+                        <SparksCanvas />
+                        {children}
+                    </ThemeProvider>
+                </AuthKitProvider>
                 <Script
                     id="json-ld"
                     type="application/ld+json"
