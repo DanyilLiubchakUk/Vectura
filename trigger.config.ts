@@ -28,12 +28,8 @@ export default defineConfig({
             syncEnvVars(() => {
                 return [
                     {
-                        name: "NEXT_PUBLIC_SUPABASE_URL",
-                        value: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                    },
-                    {
-                        name: "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-                        value: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+                        name: "COCKROACH_DATABASE_URL",
+                        value: process.env.COCKROACH_DATABASE_URL!,
                     },
                     {
                         name: "APCA_API_BASE_URL",

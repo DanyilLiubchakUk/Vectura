@@ -1,6 +1,6 @@
 import { fetchSplitsFromAlphaVantage } from "@/utils/alphavantage/splits";
 import { fetchDayBarsFromAlpaca } from "@/utils/alpaca/backtestFetcher";
-import * as backtestStorage from "@/utils/supabase/backtestStorage";
+import * as backtestStorage from "@/utils/cockroach/backtestStorage";
 import type { DayBlob, SymbolRange, SplitInfo } from "@/backtest/types";
 
 export const serverAdapter = {
@@ -43,12 +43,12 @@ export const serverAdapter = {
             return backtestStorage.loadPersistedDays(symbol, reqFrom, reqTo);
         },
 
-        async flushBucketToSupabase(
+        async flushBucket(
             symbol: string,
             bucket: DayBlob[],
             currentRange: SymbolRange | null
         ): Promise<SymbolRange | null> {
-            return backtestStorage.flushBucketToSupabase(
+            return backtestStorage.flushBucket(
                 symbol,
                 bucket,
                 currentRange

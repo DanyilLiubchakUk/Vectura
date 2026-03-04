@@ -2,12 +2,12 @@ import {
     readSymbolRange,
     loadPersistedDays,
     upsertSymbolRange,
-    flushBucketToSupabase,
+    flushBucket,
     updateSplitsInDatabase,
     updateFirstAvailableDay,
     deleteCachedBarsForSymbol,
     resetSymbolRangeAfterSplitChange,
-} from "@/utils/supabase/backtestStorage";
+} from "@/utils/cockroach/backtestStorage";
 import { NextRequest } from "next/server";
 import type { DayBlob, SymbolRange, SplitInfo } from "@/backtest/types";
 
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
                 });
             }
 
-            case "flushBucketToSupabase": {
+            case "flushBucket": {
                 const symbol = params.symbol;
                 const bucket = params.bucket;
                 const currentRange = params.currentRange;
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
                         { status: 400 }
                     );
                 }
-                const result = await flushBucketToSupabase(
+                const result = await flushBucket(
                     symbol,
                     bucket as DayBlob[],
                     currentRange as SymbolRange | null

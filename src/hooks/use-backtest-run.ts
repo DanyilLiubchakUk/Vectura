@@ -1,5 +1,4 @@
 import { useBacktestRunsStore } from "@/stores/backtest-runs-store";
-import { runBacktestCore } from "@/backtest/core/engine";
 import { useCallback } from "react";
 import type {
     BacktestConfig,
@@ -7,10 +6,166 @@ import type {
     BacktestResult,
 } from "@/backtest/types";
 import type { BacktestFormValues } from "@/components/backtest/schema";
+import type { BacktestRun } from "@/stores/backtest-runs-store";
+
+type BacktestRunStore = {
+    getRun: (id: string) => BacktestRun | undefined;
+    updateRun: (id: string, updates: Partial<Omit<BacktestRun, "id" | "createdAt">>) => void;
+    cancelRun: (id: string) => void;
+};
+
+async function startLocalBacktestRequest(
+    config: BacktestConfig,
+    abortController: AbortController
+): Promise<Response> {
+    const res = await fetch("/api/backtest/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ config }),
+        signal: abortController.signal,
+    });
+
+    if (!res.ok || !res.body) {
+        throw new Error("Failed to start local backtest");
+    }
+
+    return res;
+}
+
+function parseSseEvent(raw: string): any | null {
+    const line = raw
+        .split("\n")
+        .find((l) => l.startsWith("data: "));
+    if (!line) return null;
+    const json = line.slice(6);
+    if (!json) return null;
+
+    try {
+        return JSON.parse(json);
+    } catch {
+        return null;
+    }
+}
+
+async function consumeLocalBacktestStream(params: {
+    runId: string;
+    res: Response;
+    store: BacktestRunStore;
+    abortController: AbortController;
+}): Promise<BacktestResult> {
+    const { runId, res, store, abortController } = params;
+
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let finalResult: BacktestResult | null = null;
+
+    const handleEvent = (raw: string) => {
+        const data = parseSseEvent(raw);
+        if (!data) return;
+
+        const currentRun = store.getRun(runId);
+        if (!currentRun || abortController.signal.aborted) return;
+
+        if (data.type === "progress") {
+            store.updateRun(runId, {
+                status: "running",
+                progress: data as BacktestProgressEvent,
+            });
+        } else if (data.type === "result") {
+            finalResult = data as BacktestResult;
+        } else if (data.type === "error") {
+            throw new Error(data.error || "Backtest error");
+        }
+    };
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // Events are separated by double newline.
+        let sepIndex: number;
+        while ((sepIndex = buffer.indexOf("\n\n")) !== -1) {
+            const rawEvent = buffer.slice(0, sepIndex).trim();
+            buffer = buffer.slice(sepIndex + 2);
+            if (rawEvent) {
+                handleEvent(rawEvent);
+            }
+        }
+    }
+
+    const currentRun = store.getRun(runId);
+    if (!currentRun || currentRun.status !== "running") {
+        throw new Error("Backtest run was no longer active");
+    }
+
+    if (abortController.signal.aborted) {
+        throw Object.assign(new Error("Backtest cancelled"), {
+            name: "AbortError",
+        });
+    }
+
+    if (!finalResult) {
+        throw new Error("Backtest did not return a result");
+    }
+
+    return finalResult;
+}
 
 export function useBacktestRun(runId: string) {
-    const store = useBacktestRunsStore();
-    const run = store.getRun(runId);
+    const storeHook = useBacktestRunsStore();
+    const run = storeHook.getRun(runId);
+    const store: BacktestRunStore = {
+        getRun: storeHook.getRun,
+        updateRun: storeHook.updateRun,
+        cancelRun: storeHook.cancelRun,
+    };
+
+    const runLocalBacktest = async (runId: string, config: BacktestConfig) => {
+        const abortController = new AbortController();
+        store.updateRun(runId, { abortController });
+
+        try {
+            const res = await startLocalBacktestRequest(config, abortController);
+            const result = await consumeLocalBacktestStream({
+                runId,
+                res,
+                store,
+                abortController,
+            });
+
+            store.updateRun(runId, {
+                status: "completed",
+                result,
+            });
+        } catch (err) {
+            const currentRun = store.getRun(runId);
+            if (!currentRun || currentRun.status !== "running") {
+                return;
+            }
+
+            if (
+                abortController.signal.aborted ||
+                (err instanceof Error && err.name === "AbortError")
+            ) {
+                store.updateRun(runId, {
+                    status: "cancelled",
+                    error: "Backtest cancelled",
+                });
+            } else {
+                store.updateRun(runId, {
+                    status: "error",
+                    error:
+                        err instanceof Error
+                            ? err.message
+                            : "Unknown error occurred",
+                });
+            }
+        } finally {
+            store.updateRun(runId, { abortController: undefined });
+        }
+    };
 
     const runBacktest = useCallback(
         async (values: BacktestFormValues) => {
@@ -75,74 +230,6 @@ export function useBacktestRun(runId: string) {
         },
         [runId, run, store]
     );
-
-    const runLocalBacktest = async (runId: string, config: BacktestConfig) => {
-        const abortController = new AbortController();
-        store.updateRun(runId, { abortController });
-
-        try {
-            const onProgress = async (event: BacktestProgressEvent) => {
-                const currentRun = store.getRun(runId);
-                if (
-                    !currentRun ||
-                    currentRun.status !== "running" ||
-                    abortController.signal.aborted
-                ) {
-                    return;
-                }
-                store.updateRun(runId, { progress: event });
-            };
-
-            const result = await runBacktestCore(
-                config,
-                onProgress,
-                abortController.signal
-            );
-
-            const currentRun = store.getRun(runId);
-            if (!currentRun || currentRun.status !== "running") {
-                return;
-            }
-
-            if (abortController.signal.aborted) {
-                store.updateRun(runId, {
-                    status: "cancelled",
-                    error: "Backtest cancelled",
-                });
-                return;
-            }
-
-            store.updateRun(runId, {
-                status: "completed",
-                result,
-            });
-        } catch (err) {
-            const currentRun = store.getRun(runId);
-            if (!currentRun || currentRun.status !== "running") {
-                return;
-            }
-
-            if (
-                abortController.signal.aborted ||
-                (err instanceof Error && err.name === "AbortError")
-            ) {
-                store.updateRun(runId, {
-                    status: "cancelled",
-                    error: "Backtest cancelled",
-                });
-            } else {
-                store.updateRun(runId, {
-                    status: "error",
-                    error:
-                        err instanceof Error
-                            ? err.message
-                            : "Unknown error occurred",
-                });
-            }
-        } finally {
-            store.updateRun(runId, { abortController: undefined });
-        }
-    };
 
     const runCloudBacktest = async (
         runId: string,

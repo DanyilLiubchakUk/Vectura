@@ -1,7 +1,7 @@
 import readline from "readline";
 import { runBacktestCore } from "@/backtest/core/engine";
 import { validateDateRange } from "@/backtest/storage/rangeManager";
-import { readSymbolRange } from "@/utils/supabase/backtestStorage";
+import { readSymbolRange } from "@/utils/cockroach/backtestStorage";
 import type { BacktestConfig, BacktestProgressEvent } from "@/backtest/types";
 import { GRID_TRADE_DEFAULT_CONFIG } from "@/utils/trading/algorithms/constants";
 

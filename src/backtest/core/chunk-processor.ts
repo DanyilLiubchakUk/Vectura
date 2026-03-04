@@ -1,6 +1,6 @@
 import { addMonths, isDayBeforeOrEqual } from "@/backtest/storage/dateUtils";
 import { processContributions } from "@/backtest/core/contribution-handler";
-import { loadPersistedDays } from "@/utils/supabase/backtestStorage";
+import { loadPersistedDays } from "@/utils/cockroach/backtestStorage";
 import { dayBlobsToMinuteBars } from "@/backtest/minuteBarStorage";
 import { PriceCollector } from "@/backtest/core/price-collector";
 import { MetricsTracker } from "@/backtest/core/metrics-tracker";

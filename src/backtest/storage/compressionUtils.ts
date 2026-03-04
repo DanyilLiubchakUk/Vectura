@@ -25,7 +25,7 @@ export function decodeHexString(raw: string): Buffer {
     return Buffer.from(raw, "hex");
 }
 
-export function decodeSupabaseBytea(raw: unknown): Buffer {
+export function decodeDbBytea(raw: unknown): Buffer {
     if (Buffer.isBuffer(raw)) return raw;
     if (raw instanceof ArrayBuffer) return Buffer.from(raw);
     if (ArrayBuffer.isView(raw))

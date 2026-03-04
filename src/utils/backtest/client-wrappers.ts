@@ -92,12 +92,12 @@ export const backtestStorageClient = {
         }),
     loadPersistedDays: (symbol: string, reqFrom: string, reqTo: string) =>
         storageApi<DayBlob[]>("loadPersistedDays", { symbol, reqFrom, reqTo }),
-    flushBucketToSupabase: (
+    flushBucket: (
         symbol: string,
         bucket: DayBlob[],
         currentRange: SymbolRange | null
     ) =>
-        storageApi<SymbolRange | null>("flushBucketToSupabase", {
+        storageApi<SymbolRange | null>("flushBucket", {
             symbol,
             bucket,
             currentRange,

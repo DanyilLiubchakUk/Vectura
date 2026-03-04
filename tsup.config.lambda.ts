@@ -14,10 +14,9 @@ export default defineConfig({
         "react-dom",
         "@trigger.dev/sdk",
     ],
-    // Bundle everything else including Alpaca, Supabase, and zustand
+    // Bundle everything else including Alpaca and zustand
     noExternal: [
         "@alpacahq/alpaca-trade-api",
-        "@supabase/supabase-js",
         "zustand",
     ],
     splitting: false,

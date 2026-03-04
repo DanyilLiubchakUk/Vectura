@@ -146,7 +146,7 @@ export async function fillMissingRangesWithServerAdapter(
             bucket,
             currentRange,
             serverAdapter.fetchDayBars.bind(serverAdapter),
-            serverAdapter.storage.flushBucketToSupabase.bind(
+            serverAdapter.storage.flushBucket.bind(
                 serverAdapter.storage
             ),
             streamDay,
@@ -163,7 +163,7 @@ export async function fillMissingRangesWithServerAdapter(
             bucket,
             currentRange,
             serverAdapter.fetchDayBars.bind(serverAdapter),
-            serverAdapter.storage.flushBucketToSupabase.bind(
+            serverAdapter.storage.flushBucket.bind(
                 serverAdapter.storage
             ),
             streamDay,

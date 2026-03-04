@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * Shared Prisma client for CockroachDB (dev + prod).
  * Uses COCKROACH_DATABASE_URL. In production, set this in your environment.

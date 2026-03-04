@@ -10,13 +10,13 @@ import {
     updateToSellBatch,
     getToBuyCount,
     updateSplitsInDatabase,
-} from "@/utils/supabase/autoTradeStorage";
-import {
-    SSplitInfo,
-    STradeHistory,
-    SToBuy,
-    SToSell,
-} from "@/utils/supabase/autoTradeTypes";
+} from "@/utils/cockroach/autoTradeStorage";
+import type {
+    SplitInfoRecord,
+    TradeHistoryRecord,
+    ToBuyRecord,
+    ToSellRecord,
+} from "@/auto-trade/types";
 import { fetchSplitsFromAlphaVantage } from "@/utils/alphavantage/splits";
 import { oneDayHasPassed } from "@/auto-trade/utils/date";
 import { TRADE_SYMBOL } from "@/auto-trade/constants";
@@ -94,7 +94,10 @@ export async function checkAndRefreshSplits(now: string): Promise<{
     };
 }
 
-function areSplitsEqual(splits1: SSplitInfo[], splits2: SSplitInfo[]): boolean {
+function areSplitsEqual(
+    splits1: SplitInfoRecord[],
+    splits2: SplitInfoRecord[]
+): boolean {
     if (splits1.length !== splits2.length) {
         return false;
     }
@@ -122,8 +125,8 @@ function areSplitsEqual(splits1: SSplitInfo[], splits2: SSplitInfo[]): boolean {
     return true;
 }
 async function applyNewSplits(
-    lastSplits: SSplitInfo[],
-    newSplits: SSplitInfo[]
+    lastSplits: SplitInfoRecord[],
+    newSplits: SplitInfoRecord[]
 ): Promise<void> {
     const multiplier = calculateSplitMultiplier(lastSplits, newSplits);
 
@@ -131,8 +134,8 @@ async function applyNewSplits(
     await updateActions(multiplier);
 }
 function calculateSplitMultiplier(
-    lastSplits: SSplitInfo[],
-    newSplits: SSplitInfo[]
+    lastSplits: SplitInfoRecord[],
+    newSplits: SplitInfoRecord[]
 ): number {
     const numberOfSplitsToApply = newSplits.length - lastSplits.length;
     let multiplier = 1;
@@ -160,7 +163,7 @@ async function updateTradeHistory(multiplier: number): Promise<void> {
                 break;
             }
             // Update price, and round down
-            const updatedBatch: STradeHistory[] = batch.map((record) => ({
+            const updatedBatch: TradeHistoryRecord[] = batch.map((record) => ({
                 ...record,
                 price:
                     record.price !== null
@@ -198,7 +201,7 @@ async function updateActions(multiplier: number): Promise<void> {
             }
 
             // Update price, and round down
-            const updatedBatch: SToBuy[] = batch.map((record) => ({
+            const updatedBatch: ToBuyRecord[] = batch.map((record) => ({
                 ...record,
                 at_price:
                     record.at_price !== null
@@ -223,7 +226,7 @@ async function updateActions(multiplier: number): Promise<void> {
             }
 
             // Update price, and round down
-            const updatedBatch: SToSell[] = batch.map((record) => ({
+            const updatedBatch: ToSellRecord[] = batch.map((record) => ({
                 ...record,
                 at_price:
                     record.at_price !== null

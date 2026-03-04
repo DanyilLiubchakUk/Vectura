@@ -4,18 +4,18 @@ Vectura is an open-source project to build a fully automated stock trading syste
 
 ## What it is
 
--   **Automation**: Interpret price action and emit decisions.
--   **Trading**: Executes via a brokerage API (with paper and real modes).
--   **Free-tier friendly**: Designed to run using free/freemium tooling.
+- **Automation**: Interpret price action and emit decisions.
+- **Trading**: Executes via a brokerage API (with paper and real modes).
+- **Free-tier friendly**: Designed to run using free/freemium tooling.
 
 ## High-level architecture
 
--   **Frontend (Next.js)**: Dashboard.
--   **Workflows (Trigger.dev)**: Scheduled jobs for intraday trading tasks (runs during market hours, including pre-market for stock split check).
--   **Database (Supabase)**: Stores historical bars, trade decisions, portfolio state, and analytics.
--   **State management (Zustand)**: In-memory state management for backtesting and web.
--   **Broker (Alpaca)**: Trading API for orders and market data.
--   **Cloud backtest (Cloudflare Worker + Lambda)**: Worker receives client requests, invokes Lambda, uses Durable Objects to route progress to the right WebSocket connection. Lambda runs the backtest and POSTs progress to Worker callback.
+- **Frontend (Next.js)**: Dashboard.
+- **Workflows (Trigger.dev)**: Scheduled jobs for intraday trading tasks (runs during market hours, including pre-market for stock split check).
+- **Database (CockroachDB + Prisma)**: Stores historical bars, trade decisions, portfolio state, and analytics.
+- **State management (Zustand)**: In-memory state management for backtesting and web.
+- **Broker (Alpaca)**: Trading API for orders and market data.
+- **Cloud backtest (Cloudflare Worker + Lambda)**: Worker receives client requests, invokes Lambda, uses Durable Objects to route progress to the right WebSocket connection. Lambda runs the backtest and POSTs progress to Worker callback.
 
 ## Backtesting
 
@@ -23,22 +23,22 @@ Vectura includes a comprehensive backtesting system with two execution modes:
 
 ### Local Mode
 
--   Runs on your local machine via Server-Sent Events (SSE)
--   Streams progress updates in real-time
--   Suitable for quick backtests and development
--   No cloud costs - uses your local resources
--   Supports running multiple backtests in parallel
+- Runs on your local machine via Server-Sent Events (SSE)
+- Streams progress updates in real-time
+- Suitable for quick backtests and development
+- No cloud costs - uses your local resources
+- Supports running multiple backtests in parallel
 
 ### Cloud Mode (Cloudflare Worker + AWS Lambda)
 
--   **Client** connects to a Cloudflare Worker via WebSocket with a job ID
--   **Worker** starts Lambda execution, returns job ID to client
--   **Lambda** runs the backtest and POSTs progress to Worker callback
--   **Worker** uses Durable Objects (keyed by job ID) to route progress to the right WebSocket → client
--   Handles long-running backtests (up to 15 minutes)
--   Real-time progress streaming through a single WebSocket connection
--   Fully free-tier friendly: Cloudflare Workers (free tier) + AWS Lambda (free tier)
--   Supports running multiple backtests in parallel
+- **Client** connects to a Cloudflare Worker via WebSocket with a job ID
+- **Worker** starts Lambda execution, returns job ID to client
+- **Lambda** runs the backtest and POSTs progress to Worker callback
+- **Worker** uses Durable Objects (keyed by job ID) to route progress to the right WebSocket → client
+- Handles long-running backtests (up to 15 minutes)
+- Real-time progress streaming through a single WebSocket connection
+- Fully free-tier friendly: Cloudflare Workers (free tier) + AWS Lambda (free tier)
+- Supports running multiple backtests in parallel
 
 **Before the migration:** Cloud Mode previously used AWS API Gateway WebSocket to connect the client directly to Lambda. WebSocket connection API Gateway is only free for the first 12 months of AWS account creation. The migration to Cloudflare Workers + Durable Objects provides a fully free solution with no time limit.
 
@@ -52,7 +52,7 @@ For detailed setup instructions, see [docs/cloud-setup.md](docs/cloud-setup.md).
 2. Create IAM user for Worker (Lambda invoke only)
 3. Create Cloudflare Worker, configure Durable Objects for job routing
 4. Set Worker secrets (AWS credentials, `CALLBACK_SECRET`)
-5. Set environment variables in Lambda (Supabase, Alpaca, AlphaVantage, `CALLBACK_SECRET`)
+5. Set environment variables in Lambda (CockroachDB, Alpaca, AlphaVantage, `CALLBACK_SECRET`)
 6. Set `NEXT_PUBLIC_WS_URL` in `.env.local` to your Worker WebSocket URL
 7. Build and deploy: `npm run deploy:lambda` (upload zip to Lambda), `cd worker && npm run deploy` (Worker)
 
@@ -66,19 +66,17 @@ NEXT_PUBLIC_WS_URL=wss://vectura-progress-worker.YOUR_SUBDOMAIN.workers.dev
 
 Vectura includes comprehensive documentation pages accessible from the web interface:
 
--   **How the Backtest Works** (`/how-backtest-works`): Learn how to configure parameters, choose execution modes (Local vs Cloud), understand the algorithm, and interpret results. Everything you need to know about using and understanding the backtest.
--   **Development Journey** (`/development-journey`): Read about the development process: from CSV files to Zustand, finding free APIs, implementing PDT rules, optimizing performance from 7 hours to fast execution, and the migration from AWS API Gateway to Cloudflare Workers.
--   **Cloud Setup** ([docs/cloud-setup.md](docs/cloud-setup.md)): Step-by-step guide to set up Cloud Mode (Cloudflare Worker + AWS Lambda).
+- **How the Backtest Works** (`/how-backtest-works`): Learn how to configure parameters, choose execution modes (Local vs Cloud), understand the algorithm, and interpret results. Everything you need to know about using and understanding the backtest.
+- **Development Journey** (`/development-journey`): Read about the development process: from CSV files to Zustand, finding free APIs, implementing PDT rules, optimizing performance from 7 hours to fast execution, and the migration from AWS API Gateway to Cloudflare Workers.
+- **Cloud Setup** ([docs/cloud-setup.md](docs/cloud-setup.md)): Step-by-step guide to set up Cloud Mode (Cloudflare Worker + AWS Lambda).
 
 ## Getting started
 
 ### Prerequisites
 
 1. Create `.env.local` from `.env.example` and insert your API keys:
-
-    - **Supabase**: Create your project and get:
-        - `NEXT_PUBLIC_SUPABASE_URL`
-        - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+    - **CockroachDB**:
+        - Set `COCKROACH_DATABASE_URL` (see `prisma/README.md`)
     - **Trigger.dev**:
         - Get `TRIGGER_SECRET_KEY` from their dashboard
         - Get `TRIGGER_PROJECT_REF` from the dashboard `Tasks` tab - `npx trigger.dev@latest init -p TRIGGER_PROJECT_REF` (`TRIGGER_PROJECT_REF`: `proj_` followed by 20 characters)
@@ -92,7 +90,7 @@ Vectura includes comprehensive documentation pages accessible from the web inter
 
 2. Install dependencies: `npm install`
 
-3. Set up database tables (see SQL schemas below)
+3. Set up the database: `npm run db:setup` (see `prisma/README.md`)
 
 4. Run the development server: `npm run dev`
 
@@ -104,11 +102,11 @@ The `/ranges` page allows you to manage historical stock data ranges stored in t
 
 **Features:**
 
--   **View all ranges**: See all stocks with stored historical data, including their date ranges
--   **Delete ranges**: Remove all stored data for a specific stock symbol
--   **Adjust range size**: Make ranges bigger or smaller by changing the start and end dates
--   **Move ranges**: Shift the entire date range to a different time period
--   **Smart suggestions**: When a selected date is a closed market day, the system suggests the nearest open trading days
+- **View all ranges**: See all stocks with stored historical data, including their date ranges
+- **Delete ranges**: Remove all stored data for a specific stock symbol
+- **Adjust range size**: Make ranges bigger or smaller by changing the start and end dates
+- **Move ranges**: Shift the entire date range to a different time period
+- **Smart suggestions**: When a selected date is a closed market day, the system suggests the nearest open trading days
 
 **How to use:**
 
@@ -150,8 +148,8 @@ npm run backtest
 
 **Cloud Mode Setup:**
 
--   Requires AWS Lambda and Cloudflare Worker setup (see [Cloud Setup Guide](docs/cloud-setup.md))
--   Set `NEXT_PUBLIC_WS_URL` in `.env.local` to your Cloudflare Worker URL
+- Requires AWS Lambda and Cloudflare Worker setup (see [Cloud Setup Guide](docs/cloud-setup.md))
+- Set `NEXT_PUBLIC_WS_URL` in `.env.local` to your Cloudflare Worker URL
 
 ### Backtest Results
 
@@ -161,12 +159,12 @@ After running a backtest, you'll see comprehensive results with visualizations a
 
 The backtest results include an interactive chart powered by TradingView Lightweight Charts that displays:
 
--   **Price Data**: Historical stock price over the backtest period
--   **Equity Curve**: Shows how your total account equity changed over time
--   **Cash Balance**: Displays the cash balance throughout the backtest
--   **Execution Lines**: Visual markers showing when buy and sell orders were placed and executed
--   **Fullscreen Mode**: Click to expand the chart for detailed analysis
--   **Chart Controls**: Toggle visibility of different data series (price, equity, cash, executions)
+- **Price Data**: Historical stock price over the backtest period
+- **Equity Curve**: Shows how your total account equity changed over time
+- **Cash Balance**: Displays the cash balance throughout the backtest
+- **Execution Lines**: Visual markers showing when buy and sell orders were placed and executed
+- **Fullscreen Mode**: Click to expand the chart for detailed analysis
+- **Chart Controls**: Toggle visibility of different data series (price, equity, cash, executions)
 
 #### Result Metrics
 
@@ -174,115 +172,23 @@ The results display includes comprehensive performance and risk metrics:
 
 **Performance Metrics:**
 
--   **Total Return**: Absolute dollar return and percentage return over the backtest period
--   **Buy & Hold Comparison**: Comparison showing the difference between your strategy and buying and holding with the same contributions (both dollar and percentage)
--   **Final Equity**: Total account equity at the end of the backtest
--   **Maximum Equity**: Highest total account equity reached at any point during the backtest
--   **Invested Cash**: Initial capital plus all additional cash invested over time
+- **Total Return**: Absolute dollar return and percentage return over the backtest period
+- **Buy & Hold Comparison**: Comparison showing the difference between your strategy and buying and holding with the same contributions (both dollar and percentage)
+- **Final Equity**: Total account equity at the end of the backtest
+- **Maximum Equity**: Highest total account equity reached at any point during the backtest
+- **Invested Cash**: Initial capital plus all additional cash invested over time
 
 **Risk Metrics:**
 
--   **Max Drawdown**: Largest loss from a historical equity peak to a subsequent trough (shown in both dollars and percentage)
--   **Best/Worst Month**: The percentage return achieved in the best and worst single calendar months
--   **Longest Drawdown Duration**: The longest period of drawdown in days
--   **Return/Max Drawdown Ratio**: A risk-adjusted performance metric
+- **Max Drawdown**: Largest loss from a historical equity peak to a subsequent trough (shown in both dollars and percentage)
+- **Best/Worst Month**: The percentage return achieved in the best and worst single calendar months
+- **Longest Drawdown Duration**: The longest period of drawdown in days
+- **Return/Max Drawdown Ratio**: A risk-adjusted performance metric
 
 **Trading Activity:**
 
--   **Total Trades**: Total number of completed buy and sell executions during the backtest
--   **Avg Trades/Month**: Average number of executed trades per month over the backtest period
--   **Average Invested Capital %**: The average percentage of total capital that was invested over the backtest period
+- **Total Trades**: Total number of completed buy and sell executions during the backtest
+- **Avg Trades/Month**: Average number of executed trades per month over the backtest period
+- **Average Invested Capital %**: The average percentage of total capital that was invested over the backtest period
 
 All metrics include tooltips with detailed descriptions to help you understand what each metric represents and how it's calculated.
-
-### Database setup
-
-#### Backtest tables
-
-To create tables for syncing backtest bars with Supabase, run this command in the Supabase SQL editor:
-
-```sql
-CREATE TABLE IF NOT EXISTS public.bt_bars_daily (
-  symbol text NOT NULL,
-  day date NOT NULL,
-  data bytea NOT NULL,
-  records int NOT NULL,
-  start_ts bigint NOT NULL,
-  end_ts bigint NOT NULL,
-  created_at timestamptz DEFAULT now(),
-  PRIMARY KEY (symbol, day)
-);
-CREATE INDEX IF NOT EXISTS idx_bt_bars_daily_symbol_day ON public.bt_bars_daily (symbol, day);
-
-CREATE TABLE IF NOT EXISTS public.bt_symbol_ranges (
-  symbol text PRIMARY KEY,
-  have_from date,
-  have_to date,
-  first_available_day date,
-  updated_at timestamptz DEFAULT now(),
-  splits jsonb NOT NULL DEFAULT '[]'::jsonb,
-  last_split_check date
-);
-```
-
-#### Auto-trade tables
-
-To run auto-trade, you need to create these tables with indexes in the Supabase SQL editor:
-
-```sql
-CREATE TABLE IF NOT EXISTS public.at_trade_summary (
-  symbol text PRIMARY KEY NOT NULL,
-  max_cash numeric NOT NULL,
-  max_equity numeric NOT NULL,
-  splits_last_updated_at date,
-  splits jsonb NOT NULL DEFAULT '[]'::jsonb,
-  pdt_days jsonb NOT NULL DEFAULT '[]'::jsonb,
-  session_start text,
-  session_end text
-);
-CREATE TABLE IF NOT EXISTS public.at_trade_history (
-  id text PRIMARY KEY NOT NULL,
-  timestamp text,
-  trade_type text,
-  shares numeric,
-  price numeric,
-  close_trade_id text
-);
-CREATE INDEX IF NOT EXISTS idx_at_trade_history ON public.at_trade_history (id, timestamp);
-
-CREATE TABLE IF NOT EXISTS public.at_to_buy (
-  id text PRIMARY KEY NOT NULL,
-  at_price numeric,
-  below_or_higher text
-);
-CREATE INDEX IF NOT EXISTS idx_at_to_buy ON public.at_to_buy (id, at_price);
-
-CREATE TABLE IF NOT EXISTS public.at_to_sell (
-  id text PRIMARY KEY NOT NULL,
-  at_price numeric,
-  below_or_higher text,
-  shares numeric,
-  trade_id text NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_at_to_sell ON public.at_to_sell (id, trade_id, at_price);
-
-CREATE TABLE IF NOT EXISTS public.at_open_trades (
-  id text PRIMARY KEY NOT NULL,
-  timestamp text NOT NULL,
-  price numeric NOT NULL,
-  shares numeric NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_at_open_trades ON public.at_open_trades (id, timestamp);
-
-CREATE TABLE IF NOT EXISTS public.at_algo_config (
-  symbol text NOT NULL,
-  capital_pct numeric NOT NULL, -- percentage of capital to use per buy
-  buy_below_pct numeric NOT NULL, -- percentage below current price to set next buy
-  sell_above_pct numeric NOT NULL, -- percentage above buy price to set sell
-  buy_after_sell_pct numeric NOT NULL, -- percentage higher to buy more after each sell
-  cash_floor numeric NOT NULL, -- minimum cash floor that should remain in account
-  order_gap_pct numeric NOT NULL, -- percent gap to join orders (N %), use -1 to disable filtering
-  updated_at timestamptz DEFAULT now(),
-  PRIMARY KEY (symbol)
-);
-```

@@ -2,8 +2,6 @@ import placeOrder from "@/utils/alpaca/placeOrder";
 import {
     getDBtradingData,
     saveTradeHistory,
-    saveOpenTrade,
-    deleteOpenTrade,
     saveToSellOrder,
     deleteToSellOrder,
     updatePdtDays,
@@ -11,7 +9,7 @@ import {
     updateSummaryMaxes,
     updateSummaryEndTime,
     updateSummaryStartTime,
-} from "@/utils/supabase/autoTradeStorage";
+} from "@/utils/cockroach/autoTradeStorage";
 import {
     filterToBuyActions,
     createBuyOrderAction,
@@ -24,7 +22,7 @@ import {
 import { generateOrderId, roundDown } from "@/auto-trade/utils/helpers";
 import { getFilteredAccountInfo } from "@/utils/alpaca/getTradingData";
 import { autoTradeStorage } from "@/utils/zustand/autoTradeStore";
-import { STradeHistory } from "@/utils/supabase/autoTradeTypes";
+import type { TradeHistoryRecord } from "@/auto-trade/types";
 import { TRADE_SYMBOL } from "@/auto-trade/constants";
 import { EtradeSide } from "@/types/alpaca";
 
@@ -63,8 +61,8 @@ export async function updateStore(time: string) {
     );
 
     // Persist maxes, updated PDT days, and end time to database
-    await updateSummaryMaxes(nextCashMax, nextEquityMax);
-    await updatePdtDays(updatedPdtDays);
+    await updateSummaryMaxes(nextCashMax, nextEquityMax, time);
+    await updatePdtDays(updatedPdtDays, time);
     await updateSummaryEndTime(time);
 
     // If start is still not set, initialize it to current time
@@ -254,7 +252,7 @@ async function executeBuyOrder(
 
     const actualPrice = orderResult.filledPrice ?? orderData.price;
 
-    const newTrade: STradeHistory = {
+    const newTrade: TradeHistoryRecord = {
         id: orderData.id,
         timestamp: orderData.timestamp,
         trade_type: "buy",
@@ -304,12 +302,6 @@ async function executeBuyOrder(
 
     // Save to database
     await saveTradeHistory(newTrade);
-    await saveOpenTrade({
-        id: orderData.id,
-        timestamp: orderData.timestamp,
-        price: orderData.price,
-        shares: orderData.shares,
-    });
 
     // Sync buy orders (delete removed ones, upsert all filtered ones)
     const existingBuyOrderIds = state.actions.toBuy.map((o) => o.id);
@@ -325,7 +317,7 @@ async function executeBuyOrder(
     });
 
     // Update PDT days in database
-    await updatePdtDays(updatedPdtStatus);
+    await updatePdtDays(updatedPdtStatus, orderData.timestamp);
 
     autoTradeStorage.setState((state) => ({
         ...state,
@@ -365,7 +357,7 @@ async function executeSellOrder(
 
     const actualPrice = orderResult.filledPrice ?? price;
 
-    const newTrade: STradeHistory = {
+    const newTrade: TradeHistoryRecord = {
         id,
         timestamp,
         trade_type: "sell",
@@ -402,14 +394,13 @@ async function executeSellOrder(
 
     // Save to database
     await saveTradeHistory(newTrade);
-    await deleteOpenTrade(tradeId);
     await deleteToSellOrder(sellActionId);
 
     // Sync buy orders (delete removed ones, upsert all filtered ones)
     const existingBuyOrderIds = state.actions.toBuy.map((o) => o.id);
     await syncToBuyOrders(filteredToBuy, existingBuyOrderIds);
 
-    await updatePdtDays(updatedPdtStatus);
+    await updatePdtDays(updatedPdtStatus, timestamp);
 
     autoTradeStorage.setState((state) => ({
         ...state,

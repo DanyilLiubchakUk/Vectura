@@ -82,8 +82,7 @@ This guide walks you through setting up the cloud backtest system.
 | `APCA_API_KEY_ID`               | (Alpaca)                                              |
 | `APCA_API_SECRET_KEY`           | (Alpaca)                                              |
 | `CALLBACK_SECRET`               | Same value as Worker `CALLBACK_SECRET` (see Part 5.2) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | (your Supabase)                                       |
-| `NEXT_PUBLIC_SUPABASE_URL`      | (your Supabase)                                       |
+| `COCKROACH_DATABASE_URL`        | (your CockroachDB connection string)                  |
 
 ### 3.5 Deploy Code
 

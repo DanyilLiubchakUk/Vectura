@@ -128,7 +128,7 @@ async function fillRange(
 
             if (bucket.length >= MINUTE_BAR_BATCH_SIZE) {
                 currentRange =
-                    await backtestStorageAdapter.flushBucketToSupabase(
+                    await backtestStorageAdapter.flushBucket(
                         symbol,
                         bucket,
                         currentRange
@@ -143,7 +143,7 @@ async function fillRange(
     }
 
     if (bucket.length) {
-        currentRange = await backtestStorageAdapter.flushBucketToSupabase(
+        currentRange = await backtestStorageAdapter.flushBucket(
             symbol,
             bucket,
             currentRange

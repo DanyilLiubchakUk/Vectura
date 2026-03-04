@@ -72,7 +72,7 @@ export default function DevelopmentJourneyPage() {
                                     information required extensive research.
                                     After testing various options, I settled on
                                     Alpaca API for minute bars, AlphaVantage API
-                                    for stock splits, and Supabase for data
+                                    for stock splits, and CockroachDB for data
                                     storage - all using their free tiers.
                                 </p>
                             </div>
@@ -296,7 +296,7 @@ export default function DevelopmentJourneyPage() {
                                                 </h3>
                                             </div>
                                             <ul className="space-y-1 text-sm text-muted-foreground">
-                                                <li>• Supabase</li>
+                                                <li>• CockroachDB</li>
                                                 <li>• Alpaca API</li>
                                                 <li>• AlphaVantage API</li>
                                                 <li>• Next.js API Routes</li>

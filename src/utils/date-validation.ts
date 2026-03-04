@@ -1,5 +1,5 @@
-import { findNearestTradingDaysInRange } from "@/utils/supabase/backtestStorage-server";
-import { checkDaysExist } from "@/utils/supabase/backtestStorage";
+import { findNearestTradingDaysInRange } from "@/utils/cockroach/backtestStorage-server";
+import { checkDaysExist } from "@/utils/cockroach/backtestStorage";
 import { getTodayMinusDays } from "@/backtest/storage/dateUtils";
 import { DAYS_BEFORE_TODAY } from "@/backtest/constants";
 

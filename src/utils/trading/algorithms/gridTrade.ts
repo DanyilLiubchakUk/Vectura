@@ -30,9 +30,7 @@ export default async function gridTrade(
     const config = backtesting
         ? { ...GRID_TRADE_DEFAULT_CONFIG, ...configOverrides }
         : await (
-            await import(
-                  /* webpackIgnore: true */ "@/utils/supabase/autoTradeStorage"
-            )
+            await import("@/utils/cockroach/autoTradeStorage")
         ).getAlgoConfigOrDefault();
 
     const { toBuyOrders, toSellOrders } = await getActionNeededOrders(

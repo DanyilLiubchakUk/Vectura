@@ -2,7 +2,7 @@ import {
     readSymbolRange,
     updateSymbolRangeDates,
     deleteBarsOutsideRange,
-} from "@/utils/supabase/backtestStorage";
+} from "@/utils/cockroach/backtestStorage";
 import {
     createErrorResponse,
     createBadRequestResponse,

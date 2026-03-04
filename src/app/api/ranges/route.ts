@@ -4,7 +4,7 @@ import {
     deleteSymbolCompletely,
     readSymbolRange,
     deleteBarsOutsideRange,
-} from "@/utils/supabase/backtestStorage";
+} from "@/utils/cockroach/backtestStorage";
 import {
     createErrorResponse,
     createSuccessResponse,

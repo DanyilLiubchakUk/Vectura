@@ -3,9 +3,8 @@ import {
     PDT_EQUITY_THRESHOLD,
 } from "@/utils/trading/constants";
 import { autoTradeStorage, IpdtDay } from "@/utils/zustand/autoTradeStore";
-import { getOpenTradeById } from "@/utils/supabase/autoTradeStorage";
 import { formatDay } from "@/auto-trade/utils/helpers";
-import { supabase } from "@/utils/supabase/supabaseClient";
+import { getTradeTimestampById } from "@/utils/cockroach/autoTradeStorage";
 
 export function filterPdtStatusByDate(
     pdtStatus: IpdtDay[],
@@ -115,24 +114,9 @@ async function wouldSellCreateRoundTrip(
 ): Promise<boolean> {
     const currentDay = formatDay(new Date(timestamp));
 
-    // Check if trade is in open trades
-    const openTradeFromDB = await getOpenTradeById(tradeId);
-    if (openTradeFromDB) {
-        const tradeOpenDay = formatDay(new Date(openTradeFromDB.timeStamp));
-        // If bought today and selling today - return true
-        // If bought in the past and selling today - return false
-        return tradeOpenDay === currentDay;
-    }
-
-    // Check if trade is in trade history
-    const { data, error } = await supabase
-        .from("at_trade_history")
-        .select("timestamp")
-        .eq("id", tradeId)
-        .single();
-
-    if (!error && data && data.timestamp) {
-        const tradeOpenDay = formatDay(new Date(data.timestamp));
+    const tradeTimestamp = await getTradeTimestampById(tradeId);
+    if (tradeTimestamp) {
+        const tradeOpenDay = formatDay(new Date(tradeTimestamp));
         return tradeOpenDay === currentDay;
     }
 

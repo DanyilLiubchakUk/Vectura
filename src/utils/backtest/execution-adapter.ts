@@ -20,9 +20,8 @@ async function getServerAdapter(): Promise<typeof serverAdapter> {
     if (isBrowser) {
         throw new Error("Server adapter should not be used in browser");
     }
-    const { serverAdapter } = await import(
-        /* webpackIgnore: true */ "./server-adapter"
-    );
+    const { serverAdapter } = await import("@/utils/backtest/server-adapter");
+
     return serverAdapter;
 }
 
@@ -98,20 +97,20 @@ export const backtestStorageAdapter = {
         return adapter.storage.loadPersistedDays(symbol, reqFrom, reqTo);
     },
 
-    async flushBucketToSupabase(
+    async flushBucket(
         symbol: string,
         bucket: DayBlob[],
         currentRange: SymbolRange | null
     ): Promise<SymbolRange | null> {
         if (shouldUseClient()) {
-            return backtestStorageClient.flushBucketToSupabase(
+            return backtestStorageClient.flushBucket(
                 symbol,
                 bucket,
                 currentRange
             );
         }
         const adapter = await getServerAdapter();
-        return adapter.storage.flushBucketToSupabase(
+        return adapter.storage.flushBucket(
             symbol,
             bucket,
             currentRange
