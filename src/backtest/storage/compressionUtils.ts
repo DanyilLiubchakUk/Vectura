@@ -29,7 +29,7 @@ export function decodeSupabaseBytea(raw: unknown): Buffer {
     if (Buffer.isBuffer(raw)) return raw;
     if (raw instanceof ArrayBuffer) return Buffer.from(raw);
     if (ArrayBuffer.isView(raw))
-        return Buffer.from((raw as ArrayBufferView).buffer);
+        return Buffer.from(raw as ArrayBufferView as unknown as Uint8Array);
 
     if (typeof raw === "string") {
         if (raw.startsWith("\\x")) {
