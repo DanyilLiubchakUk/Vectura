@@ -1,12 +1,11 @@
 import { authkitMiddleware } from "@workos-inc/authkit-nextjs";
 
-// Use default AuthKit middleware configuration.
-// Protection is scoped purely by the Next.js `matcher` below.
+// Run on all routes so withAuth() works everywhere (e.g. AuthKit provider
 export default authkitMiddleware();
 
-// Run middleware only on the protected routes.
-// All other routes are bypassed and stay fully public.
-// Update this list to also cover the agent API routes, when those are developed
+// Match every path except static assets so session is available for withAuth().
 export const config = {
-    matcher: ["/agent/:path*", "/dashboard/:path*"],
+    matcher: [
+        "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    ],
 };

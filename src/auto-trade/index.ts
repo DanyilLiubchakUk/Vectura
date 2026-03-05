@@ -4,6 +4,7 @@ import {
 } from "@/auto-trade/utils/date";
 import { checkAndRefreshSplits } from "@/auto-trade/utils/splitManager";
 import { getFilteredSnapshot } from "@/utils/alpaca/getTradingData";
+import { ensureLegacyAgent } from "@/utils/cockroach/legacyAgent";
 import gridTrade from "@/utils/trading/algorithms/gridTrade";
 import { TRADE_SYMBOL } from "@/auto-trade/constants";
 
@@ -11,6 +12,9 @@ export default async function AutoTrade(now: string): Promise<{
     message: string;
     success: boolean;
 }> {
+    // Ensure legacy agent exists in DB first (needed for dashboard, even if we exit early). Remove at phase 7
+    await ensureLegacyAgent();
+
     const isWithinSchedule = checkScheduleTime(now);
     if (!isWithinSchedule) {
         return {

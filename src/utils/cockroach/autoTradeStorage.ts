@@ -144,6 +144,26 @@ export async function getDBtradingData(time: string): Promise<{
   pdtDays: IpdtDay[];
 }> {
   const agentId = await getLegacyAgentId();
+  return getDBtradingDataForAgent(agentId, time);
+}
+
+export async function getDBtradingDataForAgent(
+  agentId: string,
+  time: string,
+): Promise<{
+  start: string;
+  cashMax: number;
+  equityMax: number;
+  toBuy: IorderAction[];
+  toSell: Array<{
+    id: string;
+    atPrice: number;
+    belowOrHigher: "below" | "higher";
+    shares: number;
+    tradeId: string;
+  }>;
+  pdtDays: IpdtDay[];
+}> {
   const snapshot = await getOrInitTodaySnapshot(agentId, time);
 
   const agent = await prisma.tradingAgent.findUnique({
@@ -188,6 +208,19 @@ export async function getAlgoConfigOrDefault(): Promise<{
   orderGapPct: number;
 }> {
   const agentId = await getLegacyAgentId();
+  return getAlgoConfigForAgentOrDefault(agentId);
+}
+
+export async function getAlgoConfigForAgentOrDefault(
+  agentId: string,
+): Promise<{
+  capitalPct: number;
+  buyBelowPct: number;
+  sellAbovePct: number;
+  buyAfterSellPct: number;
+  cashFloor: number;
+  orderGapPct: number;
+}> {
   const row = await prisma.tradingAgent.findUnique({
     where: { id: agentId },
     select: { strategyParams: true },
