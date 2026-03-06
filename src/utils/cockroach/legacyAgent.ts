@@ -1,5 +1,6 @@
 import { GRID_TRADE_DEFAULT_CONFIG } from "@/utils/trading/algorithms/constants";
 import { TRADE_SYMBOL } from "@/auto-trade/constants";
+import { TradingAgentStatus } from "@/lib/domain";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
@@ -36,7 +37,7 @@ export async function ensureLegacyAgent(): Promise<{
     create: {
       userId: LEGACY_USER_ID,
       name: "Legacy AutoTrade",
-      status: "ACTIVE",
+      status: TradingAgentStatus.ACTIVE,
       symbol: TRADE_SYMBOL,
       alpacaEncrypted: "ENV",
       alpacaAccountId,

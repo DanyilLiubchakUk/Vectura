@@ -1,5 +1,15 @@
 import "server-only";
 
+import {
+  AlpacaAccountType as AlpacaAccountTypeEnum,
+  TradingAgentStatus as TradingAgentStatusEnum,
+  type AlpacaAccountType,
+  type TradingAgentStatus,
+} from "@/lib/domain";
+import { getAlpacaEncryptionMasterKey } from "@/lib/alpacaMasterKey";
+import { decryptAlpacaCredentials } from "@/lib/alpacaEncryption";
+import { maskKeyId } from "@/lib/keyMask";
+import { isUuid } from "@/lib/validation";
 import { prisma } from "@/lib/db";
 
 export type AgentsListPayload = {
@@ -14,9 +24,9 @@ export type AgentsListPayload = {
   agents: Array<{
     id: string;
     name: string;
-    status: string;
+    status: TradingAgentStatus;
     symbol: string;
-    alpacaAccountType: string;
+    alpacaAccountType: AlpacaAccountType;
     createdAt: string;
     latestSnapshot: {
       date: string;
@@ -32,8 +42,11 @@ export type AgentsListPayload = {
   }>;
 };
 
-export async function getAgentsForDashboard(): Promise<AgentsListPayload> {
+export async function getAgentsForDashboard(
+  userId: string
+): Promise<AgentsListPayload> {
   const agents = await prisma.tradingAgent.findMany({
+    where: { userId },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -83,11 +96,21 @@ export async function getAgentsForDashboard(): Promise<AgentsListPayload> {
 
   const overall = {
     totalAgents: agents.length,
-    activeAgents: agents.filter((a) => a.status === "ACTIVE").length,
-    pausedAgents: agents.filter((a) => a.status === "PAUSED").length,
-    errorAgents: agents.filter((a) => a.status === "ERROR").length,
-    liveAgents: agents.filter((a) => a.alpacaAccountType === "live").length,
-    paperAgents: agents.filter((a) => a.alpacaAccountType === "paper").length,
+    activeAgents: agents.filter(
+      (a) => a.status === TradingAgentStatusEnum.ACTIVE
+    ).length,
+    pausedAgents: agents.filter(
+      (a) => a.status === TradingAgentStatusEnum.PAUSED
+    ).length,
+    errorAgents: agents.filter(
+      (a) => a.status === TradingAgentStatusEnum.ERROR
+    ).length,
+    liveAgents: agents.filter(
+      (a) => a.alpacaAccountType === AlpacaAccountTypeEnum.live
+    ).length,
+    paperAgents: agents.filter(
+      (a) => a.alpacaAccountType === AlpacaAccountTypeEnum.paper
+    ).length,
   };
 
   const items = agents.map((agent) => {
@@ -96,9 +119,9 @@ export async function getAgentsForDashboard(): Promise<AgentsListPayload> {
     return {
       id: agent.id,
       name: agent.name,
-      status: agent.status,
+      status: agent.status as TradingAgentStatus,
       symbol: agent.symbol,
-      alpacaAccountType: agent.alpacaAccountType,
+      alpacaAccountType: agent.alpacaAccountType as AlpacaAccountType,
       createdAt: agent.createdAt.toISOString(),
       latestSnapshot: snap
         ? {
@@ -125,9 +148,18 @@ export type AgentDetailPayload = {
   agent: {
     id: string;
     name: string;
-    status: string;
+    status: TradingAgentStatus;
     symbol: string;
-    alpacaAccountType: string;
+    alpacaAccountType: AlpacaAccountType;
+    maskedKeyId: string;
+    strategyParams: {
+      capitalPct: number;
+      buyBelowPct: number;
+      sellAbovePct: number;
+      buyAfterSellPct: number;
+      cashFloor: number;
+      orderGapPct: number;
+    };
     createdAt: string;
     updatedAt: string;
     lastErrorAt: string | null;
@@ -149,24 +181,24 @@ export type AgentDetailPayload = {
   };
 };
 
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export async function getAgentDetail(
   agentId: string,
+  userId: string
 ): Promise<AgentDetailPayload | null> {
-  if (!UUID_REGEX.test(agentId)) {
+  if (!isUuid(agentId)) {
     return null;
   }
 
-  const agent = await prisma.tradingAgent.findUnique({
-    where: { id: agentId },
+  const agent = await prisma.tradingAgent.findFirst({
+    where: { id: agentId, userId },
     select: {
       id: true,
       name: true,
       status: true,
       symbol: true,
       alpacaAccountType: true,
+      alpacaEncrypted: true,
+      strategyParams: true,
       createdAt: true,
       updatedAt: true,
       lastErrorAt: true,
@@ -187,13 +219,35 @@ export async function getAgentDetail(
     _max: { timestamp: true },
   });
 
+  let maskedKeyId = "—";
+  if (agent.alpacaEncrypted) {
+    try {
+      const masterKey = await getAlpacaEncryptionMasterKey();
+      const creds = decryptAlpacaCredentials(agent.alpacaEncrypted, masterKey);
+      maskedKeyId = maskKeyId(creds.keyId);
+    } catch {
+      maskedKeyId = "—";
+    }
+  }
+  const params = agent.strategyParams as Record<string, number> | null;
+  const strategyParams = {
+    capitalPct: params?.capitalPct ?? 60,
+    buyBelowPct: params?.buyBelowPct ?? 2,
+    sellAbovePct: params?.sellAbovePct ?? 18,
+    buyAfterSellPct: params?.buyAfterSellPct ?? 25,
+    cashFloor: params?.cashFloor ?? 200,
+    orderGapPct: params?.orderGapPct ?? 1.5,
+  };
+
   return {
     agent: {
       id: agent.id,
       name: agent.name,
-      status: agent.status,
+      status: agent.status as TradingAgentStatus,
       symbol: agent.symbol,
-      alpacaAccountType: agent.alpacaAccountType,
+      alpacaAccountType: agent.alpacaAccountType as AlpacaAccountType,
+      maskedKeyId,
+      strategyParams,
       createdAt: agent.createdAt.toISOString(),
       updatedAt: agent.updatedAt.toISOString(),
       lastErrorAt: agent.lastErrorAt

@@ -8,7 +8,6 @@ import type {
   ToBuyRecord,
   ToSellRecord,
   TradeHistoryRecord,
-  OpenTradeRecord,
 } from "@/auto-trade/types";
 import type {
   IpdtDay,
@@ -247,6 +246,14 @@ export async function getAlgoConfigForAgentOrDefault(
 
 export async function updatePdtDays(pdtDays: IpdtDay[], time: string): Promise<void> {
   const agentId = await getLegacyAgentId();
+  return updatePdtDaysForAgent(agentId, pdtDays, time);
+}
+
+export async function updatePdtDaysForAgent(
+  agentId: string,
+  pdtDays: IpdtDay[],
+  time: string,
+): Promise<void> {
   const day = utcDayFromIsoTimestamp(time);
   await prisma.accountSnapshot.update({
     where: { agentId_date: { agentId, date: toDbDate(day) } },
@@ -260,6 +267,15 @@ export async function updateSummaryMaxes(
   time: string
 ): Promise<void> {
   const agentId = await getLegacyAgentId();
+  return updateSummaryMaxesForAgent(agentId, cashMax, equityMax, time);
+}
+
+export async function updateSummaryMaxesForAgent(
+  agentId: string,
+  cashMax: number,
+  equityMax: number,
+  time: string,
+): Promise<void> {
   const day = utcDayFromIsoTimestamp(time);
   await prisma.accountSnapshot.update({
     where: { agentId_date: { agentId, date: toDbDate(day) } },
@@ -272,6 +288,13 @@ export async function updateSummaryMaxes(
 
 export async function updateSummaryStartTime(startTime: string): Promise<void> {
   const agentId = await getLegacyAgentId();
+  return updateSummaryStartTimeForAgent(agentId, startTime);
+}
+
+export async function updateSummaryStartTimeForAgent(
+  agentId: string,
+  startTime: string,
+): Promise<void> {
   const day = utcDayFromIsoTimestamp(startTime);
   await prisma.accountSnapshot.updateMany({
     where: { agentId, date: toDbDate(day), sessionStart: null },
@@ -281,6 +304,13 @@ export async function updateSummaryStartTime(startTime: string): Promise<void> {
 
 export async function updateSummaryEndTime(endTime: string): Promise<void> {
   const agentId = await getLegacyAgentId();
+  return updateSummaryEndTimeForAgent(agentId, endTime);
+}
+
+export async function updateSummaryEndTimeForAgent(
+  agentId: string,
+  endTime: string,
+): Promise<void> {
   const day = utcDayFromIsoTimestamp(endTime);
   await prisma.accountSnapshot.update({
     where: { agentId_date: { agentId, date: toDbDate(day) } },
@@ -290,6 +320,14 @@ export async function updateSummaryEndTime(endTime: string): Promise<void> {
 
 export async function saveTradeHistory(record: TradeHistoryRecord): Promise<void> {
   const agentId = await getLegacyAgentId();
+  return saveTradeHistoryForAgent(agentId, TRADE_SYMBOL, record);
+}
+
+export async function saveTradeHistoryForAgent(
+  agentId: string,
+  symbol: string,
+  record: TradeHistoryRecord,
+): Promise<void> {
   const timestamp = record.timestamp ? new Date(record.timestamp) : new Date();
   const side = record.trade_type === "sell" ? "sell" : "buy";
   const tradeId = record.id;
@@ -303,7 +341,7 @@ export async function saveTradeHistory(record: TradeHistoryRecord): Promise<void
       alpacaOrderId: null,
       timestamp,
       side,
-      symbol: TRADE_SYMBOL,
+      symbol,
       qty: new Prisma.Decimal(record.shares ?? 0),
       price: new Prisma.Decimal(record.price ?? 0),
       closeTradeId: record.close_trade_id,
@@ -320,6 +358,13 @@ export async function saveTradeHistory(record: TradeHistoryRecord): Promise<void
 
 export async function saveToSellOrder(record: ToSellRecord): Promise<void> {
   const agentId = await getLegacyAgentId();
+  return saveToSellOrderForAgent(agentId, record);
+}
+
+export async function saveToSellOrderForAgent(
+  agentId: string,
+  record: ToSellRecord,
+): Promise<void> {
   const agent = await prisma.tradingAgent.findUnique({
     where: { id: agentId },
     select: { riskLimits: true },
@@ -338,6 +383,13 @@ export async function saveToSellOrder(record: ToSellRecord): Promise<void> {
 
 export async function deleteToSellOrder(orderId: string): Promise<void> {
   const agentId = await getLegacyAgentId();
+  return deleteToSellOrderForAgent(agentId, orderId);
+}
+
+export async function deleteToSellOrderForAgent(
+  agentId: string,
+  orderId: string,
+): Promise<void> {
   const agent = await prisma.tradingAgent.findUnique({
     where: { id: agentId },
     select: { riskLimits: true },
@@ -350,8 +402,10 @@ export async function deleteToSellOrder(orderId: string): Promise<void> {
   });
 }
 
-async function saveToBuyOrder(record: ToBuyRecord): Promise<void> {
-  const agentId = await getLegacyAgentId();
+async function saveToBuyOrderForAgent(
+  agentId: string,
+  record: ToBuyRecord,
+): Promise<void> {
   const agent = await prisma.tradingAgent.findUnique({
     where: { id: agentId },
     select: { riskLimits: true },
@@ -366,8 +420,10 @@ async function saveToBuyOrder(record: ToBuyRecord): Promise<void> {
   });
 }
 
-async function deleteToBuyOrder(orderId: string): Promise<void> {
-  const agentId = await getLegacyAgentId();
+async function deleteToBuyOrderForAgent(
+  agentId: string,
+  orderId: string,
+): Promise<void> {
   const agent = await prisma.tradingAgent.findUnique({
     where: { id: agentId },
     select: { riskLimits: true },
@@ -380,17 +436,36 @@ async function deleteToBuyOrder(orderId: string): Promise<void> {
   });
 }
 
+async function saveToBuyOrder(record: ToBuyRecord): Promise<void> {
+  const agentId = await getLegacyAgentId();
+  return saveToBuyOrderForAgent(agentId, record);
+}
+
+async function deleteToBuyOrder(orderId: string): Promise<void> {
+  const agentId = await getLegacyAgentId();
+  return deleteToBuyOrderForAgent(agentId, orderId);
+}
+
 export async function syncToBuyOrders(
   newOrders: IorderAction[],
   existingOrderIds: string[]
 ): Promise<void> {
+  const agentId = await getLegacyAgentId();
+  return syncToBuyOrdersForAgent(agentId, newOrders, existingOrderIds);
+}
+
+export async function syncToBuyOrdersForAgent(
+  agentId: string,
+  newOrders: IorderAction[],
+  existingOrderIds: string[],
+): Promise<void> {
   const newOrderIds = new Set(newOrders.map((o) => o.id));
   const ordersToDelete = existingOrderIds.filter((id) => !newOrderIds.has(id));
   for (const id of ordersToDelete) {
-    await deleteToBuyOrder(id);
+    await deleteToBuyOrderForAgent(agentId, id);
   }
   for (const order of newOrders) {
-    await saveToBuyOrder({
+    await saveToBuyOrderForAgent(agentId, {
       id: order.id,
       at_price: order.atPrice,
       below_or_higher: order.belowOrHigher,
