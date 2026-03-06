@@ -1,9 +1,9 @@
 /**
  * Test CockroachDB connection. Run: npm run db:test
- * Uses same client as app (src/lib/db.ts).
+ * Uses CLI-safe Prisma client (src/lib/db-cli.ts).
  */
 (async () => {
-  const { prisma } = await import("../src/lib/db");
+  const { prisma } = await import("../src/lib/db-cli");
   await prisma.$queryRaw`SELECT 1`;
   console.log("CockroachDB connection OK");
   await prisma.$disconnect();

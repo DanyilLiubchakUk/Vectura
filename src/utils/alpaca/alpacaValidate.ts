@@ -1,13 +1,6 @@
 import Alpaca from "@alpacahq/alpaca-trade-api";
-
-const PAPER_BASE_URL = "https://paper-api.alpaca.markets";
-const LIVE_BASE_URL = "https://api.alpaca.markets";
-
-export type AlpacaAccountType = "paper" | "live";
-
-function getBaseUrl(accountType: AlpacaAccountType): string {
-  return accountType === "paper" ? PAPER_BASE_URL : LIVE_BASE_URL;
-}
+import { getAlpacaBaseUrl } from "./config";
+import type { AlpacaAccountType } from "@/lib/domain";
 
 function getErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
@@ -25,7 +18,7 @@ async function tryValidate(
     const alpaca = new Alpaca({
       keyId,
       secretKey,
-      baseUrl: getBaseUrl(accountType),
+      baseUrl: getAlpacaBaseUrl(accountType),
     });
     const account = await alpaca.getAccount();
     if (account?.id) {

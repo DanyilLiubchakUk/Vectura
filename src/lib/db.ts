@@ -3,6 +3,9 @@ import "server-only";
 /**
  * Shared Prisma client for CockroachDB (dev + prod).
  * Uses COCKROACH_DATABASE_URL. In production, set this in your environment.
+ *
+ * This module cannot be run under plain Node/tsx — "server-only" throws outside
+ * Next.js. For CLI scripts and workers, use db-cli.ts instead.
  */
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";

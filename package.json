@@ -14,7 +14,8 @@
     "db:test": "tsx --env-file=.env.local scripts/test-db-connection.ts",
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
-    "infisical:test": "tsx --env-file=.env.local scripts/test-infisical.ts"
+    "infisical:test": "tsx --env-file=.env.local scripts/test-infisical.ts",
+    "agent:alpaca:test": "tsx --env-file=.env.local scripts/test-agent-alpaca-account.ts"
   },
   "dependencies": {
     "@alpacahq/alpaca-trade-api": "^3.1.3",
