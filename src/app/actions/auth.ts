@@ -1,20 +1,32 @@
 "use server";
 
 import { signOut } from "@workos-inc/authkit-nextjs";
+import { headers } from "next/headers";
 
 const DEFAULT_SIGNOUT_REDIRECT = "http://localhost:3000/";
 
-function getSignOutReturnTo(): string {
-    const url = process.env.NEXT_PUBLIC_WORKOS_SIGNOUT_REDIRECT_URI;
-    if (!url?.trim()) return DEFAULT_SIGNOUT_REDIRECT;
-    try {
-        const parsed = new URL(url);
-        return parsed.origin;
-    } catch {
-        return DEFAULT_SIGNOUT_REDIRECT;
+function getSignOutReturnToFromHeaders(hdrs: Headers): string {
+    const xUrl = hdrs.get("x-url");
+    if (xUrl) {
+        try {
+            const origin = new URL(xUrl).origin;
+            return `${origin}/`;
+        } catch {
+            // fall through to host-based detection
+        }
     }
+
+    const host = hdrs.get("host");
+    if (host) {
+        const proto = hdrs.get("x-forwarded-proto") ?? "https";
+        return `${proto}://${host}/`;
+    }
+
+    return DEFAULT_SIGNOUT_REDIRECT;
 }
 
 export async function signOutAction(_formData: FormData) {
-    await signOut({ returnTo: getSignOutReturnTo() });
+    const hdrs = await headers();
+    const returnTo = getSignOutReturnToFromHeaders(hdrs as Headers);
+    await signOut({ returnTo });
 }

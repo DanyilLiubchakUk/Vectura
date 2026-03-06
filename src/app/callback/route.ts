@@ -1,9 +1,9 @@
 import { handleAuth } from "@workos-inc/authkit-nextjs";
 import { ensureUserInDb } from "@/lib/user-sync";
 
-// Redirect the user to `/` after successful sign in by default.
-// This can be customized: handleAuth({ returnPathname: "/dashboard" })
-// Upsert user on every sign-in
+// Let AuthKit redirect back to the original path captured in state
+// (returnPathname) instead of forcing a fixed location here.
+// Upsert user on every sign-in.
 export const GET = handleAuth({
   onSuccess: async ({ user }) => {
     if (user) {

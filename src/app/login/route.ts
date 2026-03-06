@@ -1,10 +1,10 @@
-import { getSignInUrl } from "@workos-inc/authkit-nextjs";
+import { getSmartSignInUrl } from "@/lib/auth/utils";
 import { redirect } from "next/navigation";
+import type { NextRequest } from "next/server";
 
-async function redirectToSignIn() {
-    const signInUrl = await getSignInUrl();
+export async function GET(request: NextRequest) {
+    const signInUrl = await getSmartSignInUrl(request);
     return redirect(signInUrl);
 }
 
-export const GET = redirectToSignIn;
-export const POST = redirectToSignIn;
+export const POST = GET;
