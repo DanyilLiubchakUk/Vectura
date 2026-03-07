@@ -1,21 +1,27 @@
 /**
  * Run one agent for one minute slot.
  * Claims (agent_id, minute_slot), loads agent, decrypts credentials,
- * syncs account snapshot from Alpaca, updates trade_executions.
+ * runs grid (reconcile open orders, place with client_order_id),
+ * syncs account snapshot and trade_history, updates trade_executions.
  * Uses db-cli so it can run in Trigger.dev worker.
- *
- * Grid order placement (reconcile open orders, place with client_order_id,
- * write trade_history) can be added here next; idempotency is enforced by
- * UNIQUE(agent_id, minute_slot) and UNIQUE(agent_id, client_order_id).
  */
-import { getAlpacaEncryptionMasterKey } from "@/lib/alpacaMasterKey";
 import { decryptAlpacaCredentials } from "@/lib/alpacaEncryption";
+import { runAgentGrid, parseStrategyParams } from "./agentGrid";
 import { getAlpacaBaseUrl } from "@/utils/alpaca/config";
 import { TradingAgentStatus } from "@/lib/domain";
 import Alpaca from "@alpacahq/alpaca-trade-api";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db-cli";
+import type { AlpacaCredentials } from "@/lib/alpacaEncryption";
 import type { AlpacaAccountType } from "@/lib/domain";
+
+/** Zero decrypted credentials in memory. */
+function zeroCredentials(creds: AlpacaCredentials): void {
+  (creds as Writable<AlpacaCredentials>).keyId = "";
+  (creds as Writable<AlpacaCredentials>).secret = "";
+}
+
+type Writable<T> = { -readonly [P in keyof T]: T[P] };
 
 const EXECUTION_STATUS = {
   RUNNING: "RUNNING",
@@ -53,6 +59,7 @@ export async function runOneAgent(
 ): Promise<RunOneAgentResult> {
   let executionId: string | null = null;
   let ordersPlaced = 0;
+  let credentials: AlpacaCredentials | undefined;
 
   try {
     const slot = new Date(minuteSlotIso);
@@ -151,6 +158,46 @@ export async function runOneAgent(
         sessionEnd: new Date(minuteSlotIso),
       },
     });
+
+    const params = parseStrategyParams(agent.strategyParams);
+    const gridResult = await runAgentGrid(
+      alpaca,
+      agentId,
+      agent.symbol,
+      minuteSlotIso,
+      params,
+      cash,
+    );
+    ordersPlaced = gridResult.ordersPlaced;
+
+    const now = new Date();
+    for (const order of gridResult.placed) {
+      await prisma.tradeHistory.upsert({
+        where: {
+          agentId_clientOrderId: { agentId, clientOrderId: order.clientOrderId },
+        },
+        create: {
+          agentId,
+          tradeId: order.clientOrderId,
+          clientOrderId: order.clientOrderId,
+          alpacaOrderId: order.alpacaOrderId,
+          timestamp: now,
+          side: order.side,
+          symbol: order.symbol,
+          qty: new Prisma.Decimal(order.qty),
+          price: new Prisma.Decimal(order.price),
+          closeTradeId: null,
+        },
+        update: {
+          alpacaOrderId: order.alpacaOrderId,
+          timestamp: now,
+          qty: new Prisma.Decimal(order.qty),
+          price: new Prisma.Decimal(order.price),
+        },
+      });
+    }
+
+    zeroCredentials(credentials);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const code = err instanceof Error ? (err as { code?: string }).code : undefined;
@@ -164,7 +211,16 @@ export async function runOneAgent(
           errorMessage: message.slice(0, 500),
         },
       });
+      await prisma.tradingAgent.updateMany({
+        where: { id: agentId },
+        data: {
+          lastErrorAt: new Date(),
+          lastErrorCode: code ?? "RUN_ERROR",
+          status: TradingAgentStatus.ERROR,
+        },
+      });
     }
+    if (typeof credentials !== "undefined") zeroCredentials(credentials);
     return {
       ok: false,
       reason: message,
