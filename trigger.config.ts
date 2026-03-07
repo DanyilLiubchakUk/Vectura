@@ -47,6 +47,26 @@ export default defineConfig({
                         name: "ALPHA_VANTAGE_API_KEY",
                         value: process.env.ALPHA_VANTAGE_API_KEY!,
                     },
+                    {
+                        name: "INFISICAL_ENVIRONMENT",
+                        value: process.env.INFISICAL_ENVIRONMENT!,
+                    },
+                    {
+                        name: "INFISICAL_PROJECT_ID",
+                        value: process.env.INFISICAL_PROJECT_ID!,
+                    },
+                    {
+                        name: "INFISICAL_ALPACA_MASTER_KEY_NAME",
+                        value: process.env.INFISICAL_ALPACA_MASTER_KEY_NAME ?? "ALPACA_ENCRYPTION_MASTER_KEY",
+                    },
+                    {
+                        name: "INFISICAL_CLIENT_ID",
+                        value: process.env.INFISICAL_CLIENT_ID!,
+                    },
+                    {
+                        name: "INFISICAL_CLIENT_SECRET",
+                        value: process.env.INFISICAL_CLIENT_SECRET!,
+                    },
                 ];
             }),
         ],
